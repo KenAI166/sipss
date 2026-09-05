@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 
 interface LoginProps {
   onLogin: (username: string, password: string) => void;
+  initialMode?: 'login' | 'register';
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -12,7 +13,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [phone, setPhone] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [success, setSuccess] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {

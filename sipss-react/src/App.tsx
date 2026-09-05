@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Home from './components/Home';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import POS from './components/POS';
@@ -16,10 +17,10 @@ import Schedule from './components/Schedule';
 import Sales from './components/Sales';
 import { initDatabase } from './utils/db';
 
-type View = 'login' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff';
+type View = 'home' | 'login' | 'signup' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff';
 
 function App() {
-  const [view, setView] = useState<View>('login');
+  const [view, setView] = useState<View>('home');
   const [user, setUser] = useState<{ full_name: string; role: string } | null>(null);
   const [dbInitialized, setDbInitialized] = useState(false);
 
@@ -46,7 +47,7 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
-    setView('login');
+    setView('home');
   };
 
   const handleNavigate = (viewName: string) => {
@@ -66,8 +67,12 @@ function App() {
     }
 
     switch (view) {
+      case 'home':
+        return <Home onNavigate={handleNavigate} />;
       case 'login':
         return <Login onLogin={handleLogin} />;
+      case 'signup':
+        return <Login onLogin={handleLogin} initialMode="register" />;
       case 'dashboard':
         return user ? <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
       case 'pos':
@@ -97,7 +102,7 @@ function App() {
       case 'staff':
         return user ? <Staff user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
       default:
-        return <Login onLogin={handleLogin} />;
+        return <Home onNavigate={handleNavigate} />;
     }
   };
 
