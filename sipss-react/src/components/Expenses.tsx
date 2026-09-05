@@ -81,6 +81,9 @@ const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
       date: new Date().toISOString().split('T')[0],
       notes: '',
     });
+    setModalType('info');
+    setModalTitle('');
+    setModalMessage('');
     setModalVisible(true);
   };
 
@@ -94,6 +97,9 @@ const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
       date: expense.date,
       notes: expense.notes,
     });
+    setModalType('info');
+    setModalTitle('');
+    setModalMessage('');
     setModalVisible(true);
   };
 
@@ -133,6 +139,7 @@ const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
         category: formData.category,
         date: formData.date,
         notes: formData.notes,
+        created_at: new Date().toISOString(),
       };
 
       if (editMode && editingExpense) {
@@ -217,7 +224,7 @@ const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
         <div className="p-8">
           {/* Header */}
           <div className="mb-8">
-            <Header title="Expenses" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Expenses" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={handleAddExpense}

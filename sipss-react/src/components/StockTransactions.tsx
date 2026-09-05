@@ -162,7 +162,7 @@ const StockTransactions: React.FC<StockTransactionsProps> = ({ user, onLogout, o
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           <div className="mb-8">
-            <Header title="Stock Transactions" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Stock Transactions" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <button onClick={() => setShowModal(true)} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition">
                 <i className="fas fa-plus mr-2"></i>Record Transaction

@@ -150,7 +150,8 @@ async function createTables(): Promise<void> {
       amount REAL NOT NULL,
       category TEXT NOT NULL,
       date TEXT NOT NULL,
-      notes TEXT
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS inventory (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -855,18 +856,20 @@ export async function saveExpense(expense: any): Promise<any> {
     );
     return expense;
   } else {
+    const createdAt = expense.created_at || new Date().toISOString();
     runExecute(
-      `INSERT INTO expenses (description, amount, category, date, notes) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO expenses (description, amount, category, date, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
       [
         expense.description,
         expense.amount,
         expense.category,
         expense.date,
         expense.notes || '',
+        createdAt,
       ]
     );
     const results = runQuery('SELECT last_insert_rowid() as id');
-    return { ...expense, id: results[0].id };
+    return { ...expense, id: results[0].id, created_at: createdAt };
   }
 }
 

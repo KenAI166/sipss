@@ -16,10 +16,11 @@ import StockTransactions from './components/StockTransactions';
 import Expenses from './components/Expenses';
 import Schedule from './components/Schedule';
 import Sales from './components/Sales';
+import Analytics from './components/Analytics';
 import { initDatabase } from './utils/db';
 import { signIn, signOut, getSessionUser, onAuthChange, canAccess, AuthUser } from './utils/auth';
 
-type View = 'home' | 'login' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff';
+type View = 'home' | 'login' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff' | 'analytics';
 
 function App() {
   const [view, setView] = useState<View>('home');
@@ -108,7 +109,7 @@ function App() {
       case 'login':
         return <Login onLogin={handleLogin} />;
       case 'dashboard':
-        return user ? <NewDashboard onNavigate={handleNavigate} currentView={view} role={user.role} /> : null;
+        return user ? <NewDashboard onNavigate={handleNavigate} onLogout={handleLogout} currentView={view} role={user.role} /> : null;
       case 'pos':
         return guard((u) => <POS user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'pos');
       case 'attendance':
@@ -135,6 +136,8 @@ function App() {
         return guard((u) => <Schedule user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'schedule');
       case 'staff':
         return guard((u) => <Staff user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'staff');
+      case 'analytics':
+        return guard((u) => <Analytics user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'analytics');
       default:
         return <Home onNavigate={handleNavigate} onLogin={handleLogin} />;
     }

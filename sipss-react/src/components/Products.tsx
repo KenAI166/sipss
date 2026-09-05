@@ -35,6 +35,8 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -242,7 +244,10 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (saving) return;
+    setSaving(true);
+    setSaveError('');
+
     const newProduct: Product = {
       id: editingProduct ? editingProduct.id : 0,
       name: formData.name,
@@ -260,13 +265,16 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
 
     try {
       await saveProduct(newProduct);
-      
+
       // Reload products from database
       const updatedProducts = await getProducts();
       setProducts(updatedProducts);
       setShowModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error);
+      setSaveError(error?.message || 'Failed to save product. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -282,7 +290,7 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           <div className="mb-8">
-            <Header title="Products" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Products" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={handleAddProduct}
@@ -538,17 +546,29 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                 </div>
               </div>
 
+              {saveError && (
+                <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                  {saveError}
+                </div>
+              )}
+
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition"
+                  disabled={saving}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition"
                 >
-                  <i className="fas fa-save mr-2"></i>Save Product
+                  {saving ? (
+                    <><i className="fas fa-spinner fa-spin mr-2"></i>Saving...</>
+                  ) : (
+                    <><i className="fas fa-save mr-2"></i>Save Product</>
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 text-black dark:text-white font-bold py-3 px-4 rounded-lg transition"
+                  disabled={saving}
+                  className="flex-1 bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 disabled:opacity-50 text-black dark:text-white font-bold py-3 px-4 rounded-lg transition"
                 >
                   <i className="fas fa-times mr-2"></i>Cancel
                 </button>

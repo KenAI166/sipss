@@ -209,8 +209,19 @@ export async function getProductById(id: number): Promise<any | null> {
 }
 
 export async function saveProduct(product: any): Promise<any> {
-  const payload = {
-    ...product,
+  // Only send columns that exist in the products table.
+  const payload: any = {
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    price: Number(product.price) || 0,
+    cost_price: Number(product.cost_price) || 0,
+    stock: Number(product.stock) || 0,
+    sku: product.sku || null,
+    barcode: product.barcode || null,
+    color: product.color || '#22C55E',
+    shape: product.shape || 'rectangle',
+    description: product.description || null,
     is_active: product.is_active === undefined ? true : Boolean(product.is_active),
   };
   return saveRow('products', payload);

@@ -174,7 +174,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
       
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
         {/* Header */}
-        <Header title="Point of Sale" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <Header title="Point of Sale" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
         <div className="p-4 mb-6 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-900 border-b">
           <div className="relative">
             <input

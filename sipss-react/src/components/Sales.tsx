@@ -111,7 +111,7 @@ const Sales: React.FC<SalesProps> = ({ user, onLogout, onNavigate }) => {
         <div className="p-8">
           {/* Header */}
           <div className="mb-8">
-            <Header title="Sales & Reports" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Sales & Reports" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
           </div>
 
           {/* Stats Cards */}

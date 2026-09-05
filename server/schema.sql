@@ -79,3 +79,91 @@ create policy "profiles_owner_all" on public.profiles
 -- insert into public.profiles (id, username, full_name, email, role) values
 --   ('<admin-auth-user-uuid>',   'admin',   'CEO / Administrator', 'admin@sipstation.com',   'owner'),
 --   ('<manager-auth-user-uuid>', 'manager', 'Store Manager',       'manager@sipstation.com', 'manager');
+
+-- =============================================================================
+-- Expenses
+-- Tracks business expenses such as utilities, supplies, rent, salaries, etc.
+-- =============================================================================
+
+drop table if exists public.expenses;
+
+create table public.expenses (
+  id            bigint generated always as identity primary key,
+  description   text not null,
+  amount        numeric(10,2) not null,
+  category      text not null,
+  date          date not null,
+  notes         text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+create index if not exists idx_expenses_date on public.expenses (date);
+create index if not exists idx_expenses_category on public.expenses (category);
+
+alter table public.expenses enable row level security;
+
+create policy "expenses_all_auth" on public.expenses
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+-- =============================================================================
+-- Products
+-- Used by the Product module (sipss-react/src/components/Products.tsx).
+-- Delete is a soft delete via is_active = false.
+-- =============================================================================
+
+create table if not exists public.products (
+  id          bigint generated always as identity primary key,
+  name        text not null,
+  category    text not null,
+  price       numeric(10,2) not null,
+  cost_price  numeric(10,2) not null default 0,
+  stock       integer not null default 0,
+  sku         text,
+  barcode     text,
+  color       text default '#22C55E',
+  shape       text default 'rectangle',
+  description text,
+  is_active   boolean not null default true,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index if not exists idx_products_category on public.products (category);
+create index if not exists idx_products_is_active on public.products (is_active);
+
+alter table public.products enable row level security;
+
+create policy "products_all_auth" on public.products
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+-- =============================================================================
+-- Transactions
+-- A unified transaction log for auditing and recent activity. The app records
+-- major events (sales, attendance, expenses, stock, payroll) here in addition
+-- to the dedicated module tables.
+-- =============================================================================
+
+drop table if exists public.transactions;
+
+create table public.transactions (
+  id            bigint generated always as identity primary key,
+  type          text not null,
+  reference_id  bigint,
+  reference_table text,
+  description   text not null,
+  amount        numeric(10,2),
+  created_by    uuid references auth.users(id),
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists idx_transactions_type on public.transactions (type);
+create index if not exists idx_transactions_created_at on public.transactions (created_at desc);
+
+alter table public.transactions enable row level security;
+
+create policy "transactions_all_auth" on public.transactions
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');

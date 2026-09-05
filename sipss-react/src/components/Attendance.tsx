@@ -659,7 +659,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
         <div className="p-8">
           {/* Header */}
           <div className="mb-8">
-            <Header title="Attendance" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Attendance" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setQrListModalVisible(true)}

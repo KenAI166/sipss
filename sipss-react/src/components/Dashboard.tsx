@@ -321,7 +321,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         {/* Header with Menu Button */}
-        <Header title="Dashboard" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <Header title="Dashboard" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
 
         <div className="p-8">
           {/* Stats Cards */}

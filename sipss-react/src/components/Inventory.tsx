@@ -225,7 +225,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
         <div className="p-8">
           {/* Header */}
           <div className="mb-8">
-            <Header title="Inventory" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Inventory" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={handleAddInventory}

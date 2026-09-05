@@ -242,7 +242,7 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           <div className="mb-8">
-            <Header title="Recipes (BOM)" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <Header title="Recipes (BOM)" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
               <button onClick={handleAdd} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition">
                 <i className="fas fa-plus mr-2"></i>Add Recipe
