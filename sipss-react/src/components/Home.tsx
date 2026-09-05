@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import Login from './Login';
 
 interface HomeProps {
   onNavigate: (view: string) => void;
+  onLogin: (username: string, password: string) => void;
 }
 
-const Home: React.FC<HomeProps> = ({ onNavigate }) => {
+const Home: React.FC<HomeProps> = ({ onNavigate, onLogin }) => {
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -24,7 +27,9 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white md:flex">
+      {/* Left side: homepage content (70% when the auth panel is open) */}
+      <div className={authMode ? 'w-full md:w-[70%] md:h-screen md:overflow-y-auto' : 'w-full'}>
       {/* Navbar */}
       <nav className="sticky top-0 bg-white shadow-sm z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -41,13 +46,13 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onNavigate('login')}
+              onClick={() => setAuthMode('login')}
               className="text-green-600 hover:text-green-700 font-medium text-sm px-3 py-2"
             >
               Login
             </button>
             <button
-              onClick={() => onNavigate('signup')}
+              onClick={() => setAuthMode('signup')}
               className="bg-green-500 hover:bg-green-600 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
             >
               Sign Up
@@ -71,7 +76,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           </p>
           <div className="flex items-center justify-center gap-3">
             <button
-              onClick={() => onNavigate('login')}
+              onClick={() => setAuthMode('login')}
               className="bg-green-500 hover:bg-green-600 text-white font-medium px-6 py-3 rounded-lg transition"
             >
               Get Started
@@ -232,6 +237,19 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
           <p>Sip Station Cafe &copy; {new Date().getFullYear()}. All rights reserved.</p>
         </div>
       </footer>
+      </div>
+
+      {/* Right side: auth panel (30%). Full-screen overlay on mobile. */}
+      {authMode && (
+        <div className="fixed inset-0 z-20 bg-white flex items-center justify-center p-4 overflow-y-auto md:static md:z-auto md:w-[30%] md:h-screen md:border-l md:border-gray-200">
+          <Login
+            embedded
+            initialMode={authMode === 'signup' ? 'register' : 'login'}
+            onLogin={onLogin}
+            onClose={() => setAuthMode(null)}
+          />
+        </div>
+      )}
     </div>
   );
 };

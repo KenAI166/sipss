@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 interface LoginProps {
   onLogin: (username: string, password: string) => void;
   initialMode?: 'login' | 'register';
+  embedded?: boolean;
+  onClose?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login', embedded = false, onClose }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -46,8 +48,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, initialMode = 'login' }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8">
+    <div className={embedded ? 'w-full' : 'min-h-screen bg-white flex items-center justify-center p-4'}>
+      <div className={`bg-white rounded-lg shadow-xl w-full p-8 relative ${embedded ? '' : 'max-w-md'}`}>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+            aria-label="Close"
+          >
+            <i className="fas fa-times text-lg"></i>
+          </button>
+        )}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-4">
             <i className="fas fa-coffee text-white text-2xl"></i>

@@ -68,7 +68,7 @@ function App() {
 
     switch (view) {
       case 'home':
-        return <Home onNavigate={handleNavigate} />;
+        return <Home onNavigate={handleNavigate} onLogin={handleLogin} />;
       case 'login':
         return <Login onLogin={handleLogin} />;
       case 'signup':
@@ -102,7 +102,7 @@ function App() {
       case 'staff':
         return user ? <Staff user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
       default:
-        return <Home onNavigate={handleNavigate} />;
+        return <Home onNavigate={handleNavigate} onLogin={handleLogin} />;
     }
   };
 
