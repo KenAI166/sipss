@@ -1,0 +1,20 @@
+{
+  "name": "sipss-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@supabase/server": "^1.5.3",
+    "dotenv": "^17.4.2",
+    "hono": "^4.13.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

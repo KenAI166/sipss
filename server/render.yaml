@@ -1,0 +1,22 @@
+# Render blueprint — deploys this folder as a web service.
+# If your repo root is the sipss folder (not server/), set rootDir in the
+# Render dashboard or move this file appropriately.
+services:
+  - type: web
+    name: sipss-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false
+      # Vercel frontend URL (e.g. https://your-app.vercel.app); leave empty to allow all origins
+      - key: CORS_ORIGIN
+        sync: false
