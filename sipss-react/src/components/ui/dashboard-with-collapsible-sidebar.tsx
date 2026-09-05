@@ -1,6 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useTheme } from "../../context/ThemeContext";
-import { getSales, getStaff, getAttendance, getIngredients, getProducts, getExpenses } from "../../utils/db";
+import React, { useState } from "react";
 import DashboardContent from "../DashboardContent";
 import { canAccess, Role } from "../../utils/auth";
 import {
@@ -12,17 +10,10 @@ import {
   BarChart3,
   Users,
   Coffee,
-  Menu,
-  Moon,
-  Sun,
-  TrendingUp,
   Activity,
   ClipboardList,
-  Bell,
-  LogOut,
   Settings,
   HelpCircle,
-  User,
   X,
   ChefHat,
   Truck,

@@ -1,8 +1,7 @@
 // SQLite database layer using sql.js for web with localStorage fallback
-import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
+import { Database } from 'sql.js';
 
 let db: Database | null = null;
-let SQL: SqlJsStatic | null = null;
 let isInitializing = false;
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
@@ -69,6 +68,7 @@ function generateId(table: string): number {
 }
 
 // Create all tables
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function createTables(): Promise<void> {
   if (!db) return;
 
