@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSchedules, saveSchedule, deleteSchedule, getStaff } from '../utils/db';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
 interface ScheduleItem {
   id: number;
@@ -32,7 +33,7 @@ interface ScheduleProps {
 }
 
 const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -215,37 +216,26 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
-              >
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-black">Schedule</h1>
-                <p className="text-gray-600 text-sm">Staff scheduling</p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
+          <div className="mb-8">
+            <Header title="Schedule" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-lg transition ${viewMode === 'list' ? 'bg-green-500 text-white' : 'bg-gray-200 text-black'}`}
+                className={`px-4 py-2 rounded-lg transition ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-black dark:text-white'}`}
               >
                 <i className="fas fa-list mr-2"></i>
                 List View
               </button>
               <button
                 onClick={() => setViewMode('calendar')}
-                className={`px-4 py-2 rounded-lg transition ${viewMode === 'calendar' ? 'bg-green-500 text-white' : 'bg-gray-200 text-black'}`}
+                className={`px-4 py-2 rounded-lg transition ${viewMode === 'calendar' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-black dark:text-white'}`}
               >
                 <i className="fas fa-calendar mr-2"></i>
                 Calendar View
               </button>
               <button
                 onClick={handleAddSchedule}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Add Schedule
@@ -253,18 +243,18 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
             </div>
           </div>
         {/* Date Selector */}
-        <div className="bg-white rounded-lg p-4 shadow-sm mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-sm mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium text-black">Select Date:</label>
+              <label className="text-sm font-medium text-black dark:text-white">Select Date:</label>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {selectedDate && formatDate(selectedDate)}
             </div>
           </div>
@@ -272,18 +262,18 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
 
         {viewMode === 'list' ? (
           /* List View */
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-950">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift Start</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift End</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Staff</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Shift Start</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Shift End</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Duration</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notes</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -294,24 +284,24 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
                     
                     return (
                       <tr key={schedule.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">{schedule.staff_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{formatDate(schedule.date)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{formatTime(schedule.shift_start)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{formatTime(schedule.shift_end)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{duration.toFixed(1)}h</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{schedule.notes || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-white">{schedule.staff_name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{formatDate(schedule.date)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{formatTime(schedule.shift_start)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{formatTime(schedule.shift_end)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{duration.toFixed(1)}h</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{schedule.notes || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEditSchedule(schedule)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900"
                               title="Edit"
                             >
                               <i className="fas fa-edit"></i>
                             </button>
                             <button
                               onClick={() => handleDeleteSchedule(schedule.id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-red-600 dark:text-red-400 hover:text-red-900"
                               title="Delete"
                             >
                               <i className="fas fa-trash"></i>
@@ -322,7 +312,7 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
                     );
                   }) : (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                         No schedules found for this date
                       </td>
                     </tr>
@@ -333,8 +323,8 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
           </div>
         ) : (
           /* Calendar View */
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-black mb-4">Weekly Overview</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Weekly Overview</h3>
             <div className="grid grid-cols-7 gap-4">
               {weekDates.map((date) => {
                 const daySchedules = schedules.filter(s => s.date === date);
@@ -344,11 +334,11 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
                 return (
                   <div
                     key={date}
-                    className={`p-3 rounded-lg border-2 ${isToday ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}
+                    className={`p-3 rounded-lg border-2 ${isToday ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'}`}
                   >
                     <div className="text-center mb-2">
-                      <p className="text-xs text-gray-500">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                      <p className={`text-lg font-bold ${isToday ? 'text-green-600' : 'text-black'}`}>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                      <p className={`text-lg font-bold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-black dark:text-white'}`}>
                         {dateObj.getDate()}
                       </p>
                     </div>
@@ -356,14 +346,14 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
                       {daySchedules.slice(0, 3).map((schedule) => (
                         <div
                           key={schedule.id}
-                          className="text-xs p-1 bg-blue-100 text-blue-800 rounded truncate"
+                          className="text-xs p-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 rounded truncate"
                           title={`${schedule.staff_name}: ${formatTime(schedule.shift_start)} - ${formatTime(schedule.shift_end)}`}
                         >
                           {schedule.staff_name}
                         </div>
                       ))}
                       {daySchedules.length > 3 && (
-                        <div className="text-xs text-gray-500 text-center">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                           +{daySchedules.length - 3} more
                         </div>
                       )}
@@ -380,14 +370,14 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
       {/* Add/Edit Schedule Modal */}
       {modalVisible && !modalTitle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-black">
+              <h3 className="text-lg font-semibold text-black dark:text-white">
                 {editMode ? 'Edit Schedule' : 'Add Schedule'}
               </h3>
               <button
                 onClick={() => setModalVisible(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -395,12 +385,12 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Staff Member *</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Staff Member *</label>
                 <select
                   name="staff_id"
                   value={formData.staff_id}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Select staff member</option>
@@ -413,49 +403,49 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Date *</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Date *</label>
                 <input
                   type="date"
                   name="date"
                   value={formData.date}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Shift Start *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">Shift Start *</label>
                   <input
                     type="time"
                     name="shift_start"
                     value={formData.shift_start}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Shift End *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">Shift End *</label>
                   <input
                     type="time"
                     name="shift_end"
                     value={formData.shift_end}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Notes</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Notes</label>
                 <textarea
                   name="notes"
                   value={formData.notes}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                   placeholder="Additional notes (optional)"
                 />
@@ -464,13 +454,13 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
               <div className="flex space-x-4">
                 <button
                   onClick={() => setModalVisible(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-black py-2 rounded-lg transition"
+                  className="flex-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 text-black dark:text-white py-2 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveSchedule}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
                 >
                   {editMode ? 'Update' : 'Add'}
                 </button>
@@ -483,29 +473,29 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
       {/* Modal */}
       {modalVisible && modalTitle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center space-x-3 mb-4">
               {modalType === 'success' && (
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-check text-green-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
               {modalType === 'error' && (
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
                   <i className="fas fa-times text-red-500"></i>
                 </div>
               )}
               {modalType === 'info' && (
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-info text-blue-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-info text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
-              <h3 className="text-lg font-semibold text-black">{modalTitle}</h3>
+              <h3 className="text-lg font-semibold text-black dark:text-white">{modalTitle}</h3>
             </div>
-            <p className="text-gray-600 mb-6">{modalMessage}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{modalMessage}</p>
             <button
               onClick={() => setModalVisible(false)}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
             >
               OK
             </button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import Header from './Header';
 import { getIngredients, saveIngredient, deleteIngredient, getSuppliers } from '../utils/db';
 
 interface Ingredient {
@@ -31,7 +32,7 @@ interface IngredientsProps {
 }
 
 const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -162,25 +163,19 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
       
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100 transition">
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
+          <div className="mb-8">
+            <Header title="Ingredients" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <button onClick={handleAdd} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                <i className="fas fa-plus mr-2"></i>Add Ingredient
               </button>
-              <div>
-                <h1 className="text-3xl font-bold text-black">Ingredients</h1>
-                <p className="text-gray-600">Manage raw materials and supplies</p>
-              </div>
             </div>
-            <button onClick={handleAdd} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition">
-              <i className="fas fa-plus mr-2"></i>Add Ingredient
-            </button>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-green-500 text-white">
+                <thead className="bg-blue-500 text-white">
                   <tr>
                     <th className="px-6 py-4 text-left font-medium">Name</th>
                     <th className="px-6 py-4 text-left font-medium">Category</th>
@@ -195,7 +190,7 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
                 <tbody>
                   {ingredients.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                         No ingredients found. Click "Add Ingredient" to create one.
                       </td>
                     </tr>
@@ -203,35 +198,35 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
                     ingredients.map(ingredient => (
                       <tr key={ingredient.id} className="border-b hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <p className="font-medium text-black">{ingredient.name}</p>
-                          <p className="text-sm text-gray-500">{ingredient.notes}</p>
+                          <p className="font-medium text-black dark:text-white">{ingredient.name}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{ingredient.notes}</p>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{ingredient.category}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{ingredient.category}</td>
                         <td className="px-6 py-4">
-                          <span className={isLowStock(ingredient) ? 'text-red-600 font-bold' : 'text-gray-600'}>
+                          <span className={isLowStock(ingredient) ? 'text-red-600 dark:text-red-400 font-bold' : 'text-gray-600 dark:text-gray-400'}>
                             {ingredient.current_quantity.toFixed(2)} {ingredient.unit}
                           </span>
                           {isLowStock(ingredient) && (
-                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">Low</span>
+                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/20 text-red-700 rounded-full">Low</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{ingredient.minimum_quantity} {ingredient.unit}</td>
-                        <td className="px-6 py-4 text-gray-600">{formatCurrency(ingredient.cost_per_unit || 0)}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{ingredient.minimum_quantity} {ingredient.unit}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{formatCurrency(ingredient.cost_per_unit || 0)}</td>
                         <td className="px-6 py-4">
                           {ingredient.expiry_date ? (
-                            <span className={isNearExpiry(ingredient.expiry_date) ? 'text-orange-600 font-medium' : 'text-gray-600'}>
+                            <span className={isNearExpiry(ingredient.expiry_date) ? 'text-orange-600 font-medium' : 'text-gray-600 dark:text-gray-400'}>
                               {new Date(ingredient.expiry_date).toLocaleDateString()}
                             </span>
                           ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className="text-gray-400 dark:text-gray-500">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
                           {suppliers.find(s => s.id === ingredient.supplier_id)?.name || '-'}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
-                            <button onClick={() => handleEdit(ingredient)} className="text-blue-500 hover:text-blue-700">
+                            <button onClick={() => handleEdit(ingredient)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700">
                               <i className="fas fa-edit"></i>
                             </button>
                             <button onClick={() => handleDelete(ingredient.id)} className="text-red-500 hover:text-red-700">
@@ -251,12 +246,12 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-black">
+              <h2 className="text-2xl font-bold text-black dark:text-white">
                 {editingIngredient ? 'Edit Ingredient' : 'Add Ingredient'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-black">
+              <button onClick={() => setShowModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white">
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
@@ -264,22 +259,22 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
             <form onSubmit={handleSave}>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Name *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Category</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Category</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="general">General</option>
                     <option value="beverage">Beverage Base</option>
@@ -292,11 +287,11 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Unit</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Unit</label>
                   <select
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="pcs">Pieces</option>
                     <option value="g">Grams</option>
@@ -312,55 +307,55 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Current Quantity</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Current Quantity</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.current_quantity}
                     onChange={(e) => setFormData({ ...formData, current_quantity: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Minimum Quantity</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Minimum Quantity</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.minimum_quantity}
                     onChange={(e) => setFormData({ ...formData, minimum_quantity: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Reorder Quantity</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Reorder Quantity</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.reorder_quantity}
                     onChange={(e) => setFormData({ ...formData, reorder_quantity: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Cost per Unit (₱)</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Cost per Unit (₱)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.cost_per_unit}
                     onChange={(e) => setFormData({ ...formData, cost_per_unit: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Supplier</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Supplier</label>
                   <select
                     value={formData.supplier_id}
                     onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">None</option>
                     {suppliers.map(supplier => (
@@ -370,21 +365,21 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Expiry Date</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Expiry Date</label>
                   <input
                     type="date"
                     value={formData.expiry_date}
                     onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Notes</label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
                   />
                 </div>
@@ -394,13 +389,13 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-black transition"
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition"
                 >
                   {editingIngredient ? 'Update' : 'Save'}
                 </button>

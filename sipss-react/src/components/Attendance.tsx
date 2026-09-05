@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Html5Qrcode } from 'html5-qrcode';
 import { getAttendance, saveAttendance, getStaff, getStaffByQRCode, getStaffById, saveStaff, initDatabase } from '../utils/db';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
 interface AttendanceRecord {
   id: number;
@@ -41,7 +42,7 @@ interface AttendanceProps {
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const attendanceRef = useRef<AttendanceRecord[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -404,7 +405,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
   const actionButtonColor = useMemo(() => {
     switch (nextActionText) {
       case 'Clock In':
-        return 'bg-green-500 hover:bg-green-600';
+        return 'bg-blue-500 hover:bg-blue-600';
       case 'Start Break':
         return 'bg-yellow-500 hover:bg-yellow-600';
       case 'End Break':
@@ -657,20 +658,9 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
-              >
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-black">Attendance</h1>
-                <p className="text-gray-600 text-sm">Time tracking system</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
+          <div className="mb-8">
+            <Header title="Attendance" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setQrListModalVisible(true)}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition flex items-center space-x-2"
@@ -680,16 +670,16 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
               </button>
               <button
                 onClick={() => setRegisterModalVisible(true)}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition flex items-center space-x-2"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition flex items-center space-x-2"
               >
                 <i className="fas fa-user-plus"></i>
                 <span>Register Staff</span>
               </button>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-black">
+              <div className="text-right ml-auto">
+                <div className="text-2xl font-bold text-black dark:text-white">
                   {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </div>
-                <div className="text-gray-600 text-sm">
+                <div className="text-gray-600 dark:text-gray-400 text-sm">
                   {currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
               </div>
@@ -698,7 +688,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
 
           {/* Staff Name Display */}
           {showStaffName && (
-            <div className="mb-6 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg text-center">
+            <div className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i className="fas fa-clock text-3xl text-white"></i>
               </div>
@@ -710,12 +700,12 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
             {/* Left Column */}
             <div className="lg:col-span-1 space-y-6">
               {/* QR Scanner */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-black mb-4">QR Scanner</h2>
-                <div className="relative w-full rounded-lg overflow-hidden bg-gray-100 mb-4" style={{ minHeight: '250px' }}>
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-black dark:text-white mb-4">QR Scanner</h2>
+                <div className="relative w-full rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 mb-4" style={{ minHeight: '250px' }}>
                   <div id={readerId} className="absolute inset-0"></div>
                   {!scannerActive && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 pointer-events-none">
                       <i className="fas fa-camera text-4xl mb-2"></i>
                       <p className="text-sm">Camera preview will appear here</p>
                     </div>
@@ -725,7 +715,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   {!scannerActive ? (
                     <button
                       onClick={startScanner}
-                      className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition flex items-center justify-center space-x-2"
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition flex items-center justify-center space-x-2"
                     >
                       <i className="fas fa-camera"></i>
                       <span>Scan QR Code</span>
@@ -739,13 +729,13 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                       <span>Stop Camera</span>
                     </button>
                   )}
-                  <div className="text-center text-gray-500 text-sm">or</div>
+                  <div className="text-center text-gray-500 dark:text-gray-400 text-sm">or</div>
                   <input
                     type="text"
                     value={qrInput}
                     onChange={(e) => setQrInput(e.target.value)}
                     placeholder="Enter or paste QR code data"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
                     onClick={handleScanQR}
@@ -758,8 +748,8 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
               </div>
 
               {/* Staff Selection */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-black mb-4">Select Staff</h2>
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-black dark:text-white mb-4">Select Staff</h2>
                 <div className="space-y-2">
                   {staff.length > 0 ? staff.map((staffMember) => (
                     <button
@@ -767,35 +757,35 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                       onClick={() => handleStaffSelect(staffMember)}
                       className={`w-full text-left p-4 rounded-lg border-2 transition ${
                         selectedStaff?.id === staffMember.id
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-200 dark:border-gray-800 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <i className="fas fa-user text-green-500"></i>
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                          <i className="fas fa-user text-blue-500 dark:text-blue-400"></i>
                         </div>
                         <div>
-                          <p className="font-medium text-black">{staffMember.name}</p>
-                          <p className="text-sm text-gray-500">{staffMember.position}</p>
+                          <p className="font-medium text-black dark:text-white">{staffMember.name}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{staffMember.position}</p>
                         </div>
                       </div>
                     </button>
                   )) : (
-                    <p className="text-gray-500 text-center py-4">No staff members available</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">No staff members available</p>
                   )}
                 </div>
               </div>
 
               {/* Action Button */}
               {selectedStaff && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-semibold text-black mb-4">Quick Actions</h2>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+                  <h2 className="text-lg font-semibold text-black dark:text-white mb-4">Quick Actions</h2>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-950 rounded-lg">
                       <div>
-                        <p className="font-medium text-black">{selectedStaff.name}</p>
-                        <p className="text-sm text-gray-500">Current Status: {attendanceStatus.replace('_', ' ').toUpperCase()}</p>
+                        <p className="font-medium text-black dark:text-white">{selectedStaff.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Current Status: {attendanceStatus.replace('_', ' ').toUpperCase()}</p>
                       </div>
                       <button
                         onClick={handleAction}
@@ -812,20 +802,20 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
             {/* Right Column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Today's Attendance */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-black mb-4">Today's Attendance</h2>
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-black dark:text-white mb-4">Today's Attendance</h2>
                 {todayAttendance.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-50 dark:bg-gray-950">
                         <tr>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time In</th>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Break</th>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Out</th>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OT Start</th>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OT End</th>
-                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Staff</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time In</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Break</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time Out</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">OT Start</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">OT End</th>
+                          <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -843,29 +833,29 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                             : 'clocked_in';
                           return (
                             <tr key={record.id}>
-                              <td className="px-2 py-4 whitespace-nowrap text-sm text-black">{record.staff_name}</td>
-                              <td className="px-2 py-4 whitespace-nowrap text-sm text-green-600">{record.time_in || '-'}</td>
-                              <td className="px-2 py-4 whitespace-nowrap text-sm text-yellow-600">
+                              <td className="px-2 py-4 whitespace-nowrap text-sm text-black dark:text-white">{record.staff_name}</td>
+                              <td className="px-2 py-4 whitespace-nowrap text-sm text-blue-600 dark:text-blue-400">{record.time_in || '-'}</td>
+                              <td className="px-2 py-4 whitespace-nowrap text-sm text-yellow-600 dark:text-yellow-400">
                                 {record.break_start && record.break_end
                                   ? `${record.break_start}-${record.break_end}`
                                   : record.break_start
                                   ? 'On break'
                                   : '-'}
                               </td>
-                              <td className="px-2 py-4 whitespace-nowrap text-sm text-red-600">{record.time_out || '-'}</td>
+                              <td className="px-2 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400">{record.time_out || '-'}</td>
                               <td className="px-2 py-4 whitespace-nowrap text-sm text-purple-600">{record.overtime_start || '-'}</td>
                               <td className="px-2 py-4 whitespace-nowrap text-sm text-indigo-600">{record.overtime_end || '-'}</td>
                               <td className="px-2 py-4 whitespace-nowrap text-sm">
                                 {status === 'completed' ? (
-                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Completed</span>
+                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 rounded-full">Completed</span>
                                 ) : status === 'on_overtime' ? (
                                   <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">On Overtime</span>
                                 ) : status === 'on_break' ? (
-                                  <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">On Break</span>
+                                  <span className="px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-full">On Break</span>
                                 ) : status === 'clocked_in' ? (
-                                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Clocked In</span>
+                                  <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 rounded-full">Clocked In</span>
                                 ) : (
-                                  <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Not Clocked In</span>
+                                  <span className="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-full">Not Clocked In</span>
                                 )}
                               </td>
                             </tr>
@@ -877,36 +867,36 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                 ) : (
                   <div className="text-center py-8">
                     <i className="fas fa-clock text-gray-300 text-4xl mb-4"></i>
-                    <p className="text-gray-500">No attendance records for today</p>
+                    <p className="text-gray-500 dark:text-gray-400">No attendance records for today</p>
                   </div>
                 )}
               </div>
 
               {/* Recent Attendance History */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-black mb-4">Recent History</h2>
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-black dark:text-white mb-4">Recent History</h2>
                 <div className="space-y-3">
                   {attendance.slice(-10).reverse().map((record) => (
-                    <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-950 rounded-lg">
                       <div>
-                        <p className="font-medium text-black">{record.staff_name}</p>
-                        <p className="text-sm text-gray-500">{formatDate(record.date)}</p>
+                        <p className="font-medium text-black dark:text-white">{record.staff_name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(record.date)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-black">{record.time_in || '--:--'} - {record.time_out || '--:--'}</p>
+                        <p className="text-sm text-black dark:text-white">{record.time_in || '--:--'} - {record.time_out || '--:--'}</p>
                         {record.overtime_start && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             OT: {record.overtime_start} - {record.overtime_end || '--:--'}
                             {record.overtime_end && (
                               <span className="text-purple-600 ml-1">({calculateOvertimeDuration(record.overtime_start, record.overtime_end)})</span>
                             )}
                           </p>
                         )}
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {record.time_out ? (
-                            <span className="text-green-600">Completed ({calculateDuration(record.time_in, record.time_out)})</span>
+                            <span className="text-blue-600 dark:text-blue-400">Completed ({calculateDuration(record.time_in, record.time_out)})</span>
                           ) : (
-                            <span className="text-yellow-600">In Progress</span>
+                            <span className="text-yellow-600 dark:text-yellow-400">In Progress</span>
                           )}
                         </p>
                       </div>
@@ -922,17 +912,17 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       {/* Register Staff Modal */}
       {registerModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-user-plus text-green-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-user-plus text-blue-500 dark:text-blue-400"></i>
                 </div>
-                <h3 className="text-lg font-semibold text-black">Register New Staff</h3>
+                <h3 className="text-lg font-semibold text-black dark:text-white">Register New Staff</h3>
               </div>
               <button
                 onClick={() => setRegisterModalVisible(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -944,7 +934,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   type="text"
                   value={registerFormData.name}
                   onChange={(e) => setRegisterFormData({ ...registerFormData, name: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter full name"
                 />
               </div>
@@ -954,7 +944,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   type="number"
                   value={registerFormData.age}
                   onChange={(e) => setRegisterFormData({ ...registerFormData, age: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter age"
                 />
               </div>
@@ -964,7 +954,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   type="text"
                   value={registerFormData.position}
                   onChange={(e) => setRegisterFormData({ ...registerFormData, position: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter position (e.g., Barista, Cashier)"
                 />
               </div>
@@ -974,7 +964,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   type="text"
                   value={registerFormData.contact_number}
                   onChange={(e) => setRegisterFormData({ ...registerFormData, contact_number: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter contact number"
                 />
               </div>
@@ -984,13 +974,13 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   type="number"
                   value={registerFormData.hourly_rate}
                   onChange={(e) => setRegisterFormData({ ...registerFormData, hourly_rate: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter hourly rate (default: 56.25)"
                 />
               </div>
               <button
                 onClick={handleRegisterStaff}
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
               >
                 Register Staff
               </button>
@@ -1002,12 +992,12 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       {/* QR Codes Modal */}
       {qrListModalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-black">Staff QR Codes</h3>
+              <h3 className="text-lg font-semibold text-black dark:text-white">Staff QR Codes</h3>
               <button
                 onClick={() => { setQrListModalVisible(false); setSelectedQRStaff(null); }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -1019,15 +1009,15 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   <div
                     key={staffMember.id}
                     onClick={() => setSelectedQRStaff(staffMember)}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-green-500 cursor-pointer transition"
+                    className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg hover:border-blue-500 cursor-pointer transition"
                   >
                     <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="font-bold text-green-600">{staffMember.name.charAt(0).toUpperCase()}</span>
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">{staffMember.name.charAt(0).toUpperCase()}</span>
                       </div>
                       <div>
-                        <p className="font-medium text-black">{staffMember.name}</p>
-                        <p className="text-sm text-gray-500">{staffMember.position}</p>
+                        <p className="font-medium text-black dark:text-white">{staffMember.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{staffMember.position}</p>
                       </div>
                     </div>
                     <img
@@ -1037,18 +1027,18 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                     />
                   </div>
                 )) : (
-                  <p className="text-gray-500 text-center col-span-2">No staff members found</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-center col-span-2">No staff members found</p>
                 )}
               </div>
             ) : (
               <div className="text-center">
                 <div className="flex items-center justify-center space-x-3 mb-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-xl font-bold text-green-600">{selectedQRStaff.name.charAt(0).toUpperCase()}</span>
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                    <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{selectedQRStaff.name.charAt(0).toUpperCase()}</span>
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-black text-lg">{selectedQRStaff.name}</p>
-                    <p className="text-gray-500">{selectedQRStaff.position}</p>
+                    <p className="font-bold text-black dark:text-white text-lg">{selectedQRStaff.name}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{selectedQRStaff.position}</p>
                   </div>
                 </div>
                 <img
@@ -1056,18 +1046,18 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   alt={`QR code for ${selectedQRStaff.name}`}
                   className="mx-auto mb-4"
                 />
-                <p className="text-gray-500 mb-6">Scan this QR code to mark attendance</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">Scan this QR code to mark attendance</p>
                 <div className="flex justify-center space-x-4">
                   <button
                     onClick={() => handlePrintQRCode(selectedQRStaff)}
-                    className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition flex items-center space-x-2"
+                    className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition flex items-center space-x-2"
                   >
                     <i className="fas fa-print"></i>
                     <span>Print</span>
                   </button>
                   <button
                     onClick={() => setSelectedQRStaff(null)}
-                    className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition"
+                    className="px-6 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 text-gray-700 rounded-lg transition"
                   >
                     Back
                   </button>
@@ -1081,29 +1071,29 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       {/* Modal */}
       {modalVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center space-x-3 mb-4">
               {modalType === 'success' && (
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-check text-green-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
               {modalType === 'error' && (
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
                   <i className="fas fa-times text-red-500"></i>
                 </div>
               )}
               {modalType === 'info' && (
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-info text-blue-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-info text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
-              <h3 className="text-lg font-semibold text-black">{modalTitle}</h3>
+              <h3 className="text-lg font-semibold text-black dark:text-white">{modalTitle}</h3>
             </div>
-            <p className="text-gray-600 mb-6">{modalMessage}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{modalMessage}</p>
             <button
               onClick={() => setModalVisible(false)}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
             >
               OK
             </button>

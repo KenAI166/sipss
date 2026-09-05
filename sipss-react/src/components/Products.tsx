@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import Header from './Header';
 import { getProducts, saveProduct, deleteProduct } from '../utils/db';
 
 interface Product {
@@ -27,7 +28,7 @@ interface ProductsProps {
 }
 
 const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -280,29 +281,20 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
+          <div className="mb-8">
+            <Header title="Products" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                onClick={handleAddProduct}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition"
               >
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
+                <i className="fas fa-plus mr-2"></i>Add Product
               </button>
-              <div>
-                <h1 className="text-3xl font-bold text-black">Products</h1>
-                <p className="text-gray-600">Manage your product catalog</p>
-              </div>
             </div>
-            <button
-              onClick={handleAddProduct}
-              className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition"
-            >
-              <i className="fas fa-plus mr-2"></i>Add Product
-            </button>
           </div>
 
           {/* Search and Filter */}
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 mb-6">
             <div className="flex items-center space-x-4">
               <div className="flex-1 relative">
                 <input
@@ -310,14 +302,14 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
               </div>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Categories</option>
                 {categories.map(category => (
@@ -327,7 +319,7 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Status</option>
                 <option value="active">Active</option>
@@ -337,10 +329,10 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
           </div>
 
           {/* Products Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-green-500 text-white">
+                <thead className="bg-blue-500 text-white">
                   <tr>
                     <th className="px-6 py-4 text-left font-medium">Product</th>
                     <th className="px-6 py-4 text-left font-medium">Category</th>
@@ -364,22 +356,22 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                             <i className="fas fa-coffee text-white"></i>
                           </div>
                           <div>
-                            <p className="font-medium text-black">{product.name}</p>
-                            <p className="text-sm text-gray-500">{product.description || ''}</p>
+                            <p className="font-medium text-black dark:text-white">{product.name}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{product.description || ''}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{product.category}</td>
-                      <td className="px-6 py-4 font-bold text-green-600">{formatCurrency(product.price)}</td>
-                      <td className="px-6 py-4 text-gray-600">{formatCurrency(product.cost_price)}</td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{product.category}</td>
+                      <td className="px-6 py-4 font-bold text-blue-600 dark:text-blue-400">{formatCurrency(product.price)}</td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{formatCurrency(product.cost_price)}</td>
                       <td className="px-6 py-4">
-                        <span className={product.stock <= 10 ? 'text-red-500 font-bold' : 'text-gray-600'}>
+                        <span className={product.stock <= 10 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-400'}>
                           {product.stock}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{product.sku || '-'}</td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{product.sku || '-'}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${product.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${product.is_active ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'bg-red-100 dark:bg-red-900/20 text-red-700'}`}>
                           {product.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -387,7 +379,7 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleEditProduct(product)}
-                            className="text-blue-500 hover:text-blue-700"
+                            className="text-blue-500 dark:text-blue-400 hover:text-blue-700"
                           >
                             <i className="fas fa-edit"></i>
                           </button>
@@ -411,14 +403,14 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
       {/* Product Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-black">
+              <h2 className="text-2xl font-bold text-black dark:text-white">
                 {editingProduct ? 'Edit Product' : 'Add Product'}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-black"
+                className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -427,25 +419,25 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
             <form onSubmit={handleSaveProduct}>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Product Name *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Product Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Category *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Category *</label>
                   <input
                     type="text"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     required
                     list="categoryList"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <datalist id="categoryList">
                     {categories.map(category => (
@@ -455,17 +447,17 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">SKU</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">SKU</label>
                   <input
                     type="text"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Selling Price *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Selling Price *</label>
                   <input
                     type="number"
                     value={formData.price}
@@ -473,48 +465,48 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                     required
                     step="0.01"
                     min="0"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Cost Price</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Cost Price</label>
                   <input
                     type="number"
                     value={formData.cost_price}
                     onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                     step="0.01"
                     min="0"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Barcode</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Barcode</label>
                   <input
                     type="text"
                     value={formData.barcode}
                     onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Color</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Color</label>
                   <input
                     type="color"
                     value={formData.color}
                     onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    className="w-full h-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full h-10 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Shape</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Shape</label>
                   <select
                     value={formData.shape}
                     onChange={(e) => setFormData({ ...formData, shape: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="rectangle">Rectangle</option>
                     <option value="rounded">Rounded</option>
@@ -524,12 +516,12 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Description</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -539,9 +531,9 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                       type="checkbox"
                       checked={formData.is_active}
                       onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                      className="w-4 h-4 text-green-500 focus:ring-green-500"
+                      className="w-4 h-4 text-blue-500 dark:text-blue-400 focus:ring-blue-500"
                     />
-                    <span className="text-sm font-medium text-black">Active</span>
+                    <span className="text-sm font-medium text-black dark:text-white">Active</span>
                   </label>
                 </div>
               </div>
@@ -549,14 +541,14 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition"
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition"
                 >
                   <i className="fas fa-save mr-2"></i>Save Product
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-black font-bold py-3 px-4 rounded-lg transition"
+                  className="flex-1 bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 text-black dark:text-white font-bold py-3 px-4 rounded-lg transition"
                 >
                   <i className="fas fa-times mr-2"></i>Cancel
                 </button>

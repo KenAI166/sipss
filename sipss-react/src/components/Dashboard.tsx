@@ -13,6 +13,7 @@ import {
 } from 'chart.js';
 import { getSales, getInventory, getExpenses, getAttendance, getProducts, getPayroll } from '../utils/db';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
 ChartJS.register(
   CategoryScale,
@@ -35,7 +36,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [todaySales, setTodaySales] = useState(0);
   const [todayProductsSold, setTodayProductsSold] = useState(0);
   const [todayExpenses, setTodayExpenses] = useState(0);
@@ -320,20 +321,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         {/* Header with Menu Button */}
-        <div className="bg-white shadow-sm p-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <i className="fas fa-bars text-gray-700 text-xl"></i>
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-black">Dashboard</h1>
-              <p className="text-gray-600 text-sm">Welcome back, {user.full_name}!</p>
-            </div>
-          </div>
-        </div>
+        <Header title="Dashboard" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         <div className="p-8">
           {/* Stats Cards */}

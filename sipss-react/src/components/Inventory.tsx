@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getInventory, saveInventory, deleteInventory, getProducts } from '../utils/db';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
 interface InventoryItem {
   id: number;
@@ -38,7 +39,7 @@ interface InventoryProps {
 }
 
 const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -223,67 +224,58 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
+          <div className="mb-8">
+            <Header title="Inventory" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                onClick={handleAddInventory}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
               >
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
+                <i className="fas fa-plus mr-2"></i>
+                Add Item
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-black">Inventory</h1>
-                <p className="text-gray-600 text-sm">Stock management</p>
-              </div>
             </div>
-            <button
-              onClick={handleAddInventory}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Add Item
-            </button>
           </div>
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Total Items</p>
-                <p className="text-2xl font-bold text-black">{inventory.length}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Total Items</p>
+                <p className="text-2xl font-bold text-black dark:text-white">{inventory.length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-boxes text-blue-500 text-xl"></i>
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                <i className="fas fa-boxes text-blue-500 dark:text-blue-400 text-xl"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Low Stock</p>
-                <p className="text-2xl font-bold text-red-600">{lowStockCount}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Low Stock</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{lowStockCount}</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
                 <i className="fas fa-exclamation-triangle text-red-500 text-xl"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Kitchen Stock</p>
-                <p className="text-2xl font-bold text-black">{inventory.filter(i => i.stock_type === 'kitchen').length}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Kitchen Stock</p>
+                <p className="text-2xl font-bold text-black dark:text-white">{inventory.filter(i => i.stock_type === 'kitchen').length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-utensils text-green-500 text-xl"></i>
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                <i className="fas fa-utensils text-blue-500 dark:text-blue-400 text-xl"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">General Stock</p>
-                <p className="text-2xl font-bold text-black">{inventory.filter(i => i.stock_type === 'general').length}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">General Stock</p>
+                <p className="text-2xl font-bold text-black dark:text-white">{inventory.filter(i => i.stock_type === 'general').length}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <i className="fas fa-warehouse text-purple-500 text-xl"></i>
@@ -296,74 +288,74 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
         <div className="flex space-x-2 mb-6">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-4 py-2 rounded-lg transition ${filterType === 'all' ? 'bg-green-500 text-white' : 'bg-white text-black hover:bg-gray-100'}`}
+            className={`px-4 py-2 rounded-lg transition ${filterType === 'all' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-900 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}`}
           >
             All Items
           </button>
           <button
             onClick={() => setFilterType('low')}
-            className={`px-4 py-2 rounded-lg transition ${filterType === 'low' ? 'bg-red-500 text-white' : 'bg-white text-black hover:bg-gray-100'}`}
+            className={`px-4 py-2 rounded-lg transition ${filterType === 'low' ? 'bg-red-500 text-white' : 'bg-white dark:bg-gray-900 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}`}
           >
             Low Stock ({lowStockCount})
           </button>
           <button
             onClick={() => setFilterType('kitchen')}
-            className={`px-4 py-2 rounded-lg transition ${filterType === 'kitchen' ? 'bg-green-500 text-white' : 'bg-white text-black hover:bg-gray-100'}`}
+            className={`px-4 py-2 rounded-lg transition ${filterType === 'kitchen' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-900 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}`}
           >
             Kitchen
           </button>
           <button
             onClick={() => setFilterType('general')}
-            className={`px-4 py-2 rounded-lg transition ${filterType === 'general' ? 'bg-purple-500 text-white' : 'bg-white text-black hover:bg-gray-100'}`}
+            className={`px-4 py-2 rounded-lg transition ${filterType === 'general' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-900 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800'}`}
           >
             General
           </button>
         </div>
 
         {/* Inventory Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-950">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minimum</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Minimum</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredInventory.length > 0 ? filteredInventory.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">{item.product_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{item.category}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black capitalize">{item.stock_type}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{item.current_quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{item.minimum_quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{item.unit}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black dark:text-white">{item.product_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{item.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white capitalize">{item.stock_type}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{item.current_quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{item.minimum_quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white">{item.unit}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {item.current_quantity <= item.minimum_quantity ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Low Stock</span>
+                        <span className="px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-full">Low Stock</span>
                       ) : (
-                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">In Stock</span>
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 rounded-full">In Stock</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEditInventory(item)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900"
                           title="Edit"
                         >
                           <i className="fas fa-edit"></i>
                         </button>
                         <button
                           onClick={() => handleDeleteInventory(item.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 dark:text-red-400 hover:text-red-900"
                           title="Delete"
                         >
                           <i className="fas fa-trash"></i>
@@ -373,7 +365,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       No inventory items found
                     </td>
                   </tr>
@@ -388,9 +380,9 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
       {/* Add/Edit Inventory Modal */}
       {modalVisible && !modalTitle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-black">
+              <h3 className="text-lg font-semibold text-black dark:text-white">
                 {editMode ? 'Edit Inventory Item' : 'Add Inventory Item'}
               </h3>
               <button
@@ -399,7 +391,7 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
                   setModalTitle('');
                   setModalMessage('');
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -407,11 +399,11 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Link to Product (Optional)</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Link to Product (Optional)</label>
                 <select
                   value={formData.product_id}
                   onChange={handleProductSelect}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select a product</option>
                   {products.map((product) => (
@@ -423,13 +415,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Product Name *</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Product Name *</label>
                 <input
                   type="text"
                   name="product_name"
                   value={formData.product_name}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter product name"
                   required
                 />
@@ -437,25 +429,25 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Current Quantity *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">Current Quantity *</label>
                   <input
                     type="number"
                     name="current_quantity"
                     value={formData.current_quantity}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="0"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Minimum Quantity</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">Minimum Quantity</label>
                   <input
                     type="number"
                     name="minimum_quantity"
                     value={formData.minimum_quantity}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="10"
                   />
                 </div>
@@ -463,12 +455,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Unit</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">Unit</label>
                   <select
                     name="unit"
                     value={formData.unit}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="pcs">Pieces</option>
                     <option value="kg">Kilograms</option>
@@ -478,12 +470,12 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-black mb-2">Stock Type</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-2">Stock Type</label>
                   <select
                     name="stock_type"
                     value={formData.stock_type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="kitchen">Kitchen</option>
                     <option value="general">General</option>
@@ -492,13 +484,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Category</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Category</label>
                 <input
                   type="text"
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter category"
                 />
               </div>
@@ -506,13 +498,13 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
               <div className="flex space-x-4">
                 <button
                   onClick={() => setModalVisible(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-black py-2 rounded-lg transition"
+                  className="flex-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 text-black dark:text-white py-2 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveInventory}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
                 >
                   {editMode ? 'Update' : 'Add'}
                 </button>
@@ -525,33 +517,33 @@ const Inventory: React.FC<InventoryProps> = ({ user, onLogout, onNavigate }) => 
       {/* Modal */}
       {modalVisible && modalTitle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center space-x-3 mb-4">
               {modalType === 'success' && (
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-check text-green-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
               {modalType === 'error' && (
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
                   <i className="fas fa-times text-red-500"></i>
                 </div>
               )}
               {modalType === 'info' && (
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-info text-blue-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-info text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
-              <h3 className="text-lg font-semibold text-black">{modalTitle}</h3>
+              <h3 className="text-lg font-semibold text-black dark:text-white">{modalTitle}</h3>
             </div>
-            <p className="text-gray-600 mb-6">{modalMessage}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{modalMessage}</p>
             <button
               onClick={() => {
                 setModalVisible(false);
                 setModalTitle('');
                 setModalMessage('');
               }}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
             >
               OK
             </button>

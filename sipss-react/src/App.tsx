@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import Home from './components/Home';
 import Login from './components/Login';
-import Dashboard from './components/Dashboard';
+import { Example as NewDashboard } from './components/ui/dashboard-with-collapsible-sidebar';
 import POS from './components/POS';
 import Products from './components/Products';
 import Attendance from './components/Attendance';
@@ -16,46 +17,81 @@ import Expenses from './components/Expenses';
 import Schedule from './components/Schedule';
 import Sales from './components/Sales';
 import { initDatabase } from './utils/db';
+import { signIn, signOut, getSessionUser, onAuthChange, canAccess, AuthUser } from './utils/auth';
 
-type View = 'home' | 'login' | 'signup' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff';
+type View = 'home' | 'login' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff';
 
 function App() {
   const [view, setView] = useState<View>('home');
-  const [user, setUser] = useState<{ full_name: string; role: string } | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [dbInitialized, setDbInitialized] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     // Initialize database on app start
     const initializeApp = async () => {
       try {
-        await initDatabase();
-        setDbInitialized(true);
+        const dbTimeout = new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('Database initialization timed out')), 3000)
+        );
+        await Promise.race([initDatabase(), dbTimeout]);
       } catch (error) {
         console.error('Failed to initialize database:', error);
-        setDbInitialized(true); // Continue even if initialization fails
+      } finally {
+        setDbInitialized(true);
       }
     };
-    
+
     initializeApp();
   }, []);
 
-  const handleLogin = (username: string, password: string) => {
-    // Simulate login - in real app, this would call an API
-    setUser({ full_name: username, role: 'owner' });
-    setView('dashboard');
+  useEffect(() => {
+    // Restore an existing Supabase session and keep auth state in sync.
+    getSessionUser().then((u) => {
+      setUser(u);
+      if (u) setView('dashboard');
+      setAuthChecked(true);
+    });
+
+    const { data: { subscription } } = onAuthChange((u) => {
+      setUser(u);
+      if (!u) setView('home');
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Returns an error message for the login form, or null on success.
+  const handleLogin = async (username: string, password: string): Promise<string | null> => {
+    try {
+      const authUser = await signIn(username, password);
+      setUser(authUser);
+      setView('dashboard');
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : 'Invalid username or password';
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     setUser(null);
     setView('home');
   };
 
   const handleNavigate = (viewName: string) => {
+    // Enforce role-based access: managers cannot reach owner-only views.
+    if (user && !canAccess(user.role, viewName)) {
+      setView('dashboard');
+      return;
+    }
     setView(viewName as View);
   };
 
+  const guard = (render: (u: AuthUser) => React.ReactNode, viewName: View) =>
+    !user || !canAccess(user.role, viewName) ? null : render(user);
+
   const renderView = () => {
-    if (!dbInitialized) {
+    if (!dbInitialized || !authChecked) {
       return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
@@ -71,45 +107,45 @@ function App() {
         return <Home onNavigate={handleNavigate} onLogin={handleLogin} />;
       case 'login':
         return <Login onLogin={handleLogin} />;
-      case 'signup':
-        return <Login onLogin={handleLogin} initialMode="register" />;
       case 'dashboard':
-        return user ? <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return user ? <NewDashboard onNavigate={handleNavigate} currentView={view} role={user.role} /> : null;
       case 'pos':
-        return user ? <POS user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <POS user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'pos');
       case 'attendance':
-        return user ? <Attendance user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Attendance user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'attendance');
       case 'products':
-        return user ? <Products user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Products user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'products');
       case 'sales':
-        return user ? <Sales user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Sales user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'sales');
       case 'inventory':
-        return user ? <Inventory user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Inventory user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'inventory');
       case 'ingredients':
-        return user ? <Ingredients user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Ingredients user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'ingredients');
       case 'recipes':
-        return user ? <Recipes user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Recipes user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'recipes');
       case 'suppliers':
-        return user ? <Suppliers user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Suppliers user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'suppliers');
       case 'stock-transactions':
-        return user ? <StockTransactions user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <StockTransactions user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'stock-transactions');
       case 'payroll':
-        return user ? <Payroll user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Payroll user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'payroll');
       case 'expenses':
-        return user ? <Expenses user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Expenses user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'expenses');
       case 'schedule':
-        return user ? <Schedule user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Schedule user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'schedule');
       case 'staff':
-        return user ? <Staff user={user} onLogout={handleLogout} onNavigate={handleNavigate} /> : null;
+        return guard((u) => <Staff user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'staff');
       default:
         return <Home onNavigate={handleNavigate} onLogin={handleLogin} />;
     }
   };
 
   return (
-    <div className="App">
-      {renderView()}
-    </div>
+    <ThemeProvider>
+      <div className="App">
+        {renderView()}
+      </div>
+    </ThemeProvider>
   );
 }
 

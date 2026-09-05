@@ -20,49 +20,15 @@ export async function initDatabase(): Promise<void> {
 
   isInitializing = true;
   initPromise = (async () => {
-    try {
-      // Load SQL.js with local WASM file from public folder
-      try {
-        SQL = await initSqlJs({
-          locateFile: (file: string) => `${window.location.origin}/${file}`,
-        });
-      } catch (wasmError) {
-        console.error('Failed to load local WASM, using localStorage fallback', wasmError);
-        useLocalStorageFallback = true;
-        initializeLocalStorageTables();
-        console.log('Using localStorage fallback mode');
-        return;
-      }
-
-      // Load or create database
-      const savedDb = localStorage.getItem('sipss_sqlite_db');
-      if (savedDb) {
-        try {
-          const uint8Array = new Uint8Array(JSON.parse(savedDb));
-          db = new SQL.Database(uint8Array);
-        } catch (parseError) {
-          console.warn('Failed to parse saved database, creating new one', parseError);
-          db = new SQL.Database();
-          await createTables();
-        }
-      } else {
-        db = new SQL.Database();
-      }
-
-      // Always run createTables to ensure new/missing tables are created (migrations)
-      await createTables();
-
-      console.log('SQLite database initialized successfully');
-    } catch (error) {
-      console.error('Error initializing database, switching to localStorage fallback:', error);
-      useLocalStorageFallback = true;
-      initializeLocalStorageTables();
-      console.log('Using localStorage fallback mode');
-    } finally {
-      isInitializing = false;
-      isInitialized = true;
-    }
-  })();
+    // Skip SQL.js WASM loading in dev until the wasm file is served with the
+    // correct MIME type. Use localStorage fallback so the app loads reliably.
+    useLocalStorageFallback = true;
+    initializeLocalStorageTables();
+    console.log('Using localStorage fallback mode');
+  })().finally(() => {
+    isInitializing = false;
+    isInitialized = true;
+  });
 
   return initPromise;
 }

@@ -1,4 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { canAccess, Role } from '../utils/auth';
+import {
+  Home,
+  Monitor,
+  ShoppingCart,
+  Package,
+  Coffee,
+  ChefHat,
+  Truck,
+  ScanLine,
+  DollarSign,
+  ClipboardList,
+  Calendar,
+  Users,
+  Activity,
+  ChevronDown,
+  X,
+  User,
+} from "lucide-react";
+
+type IconType = React.ComponentType<{ className?: string }>;
 
 interface SidebarProps {
   user: {
@@ -12,102 +33,156 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+interface OptionProps {
+  Icon: IconType;
+  title: string;
+  view: string;
+  selected: string;
+  setSelected: (view: string) => void;
+  onNavigate: (view: string) => void;
+  onClose: () => void;
+}
+
+const menuItems = [
+  { view: 'dashboard', title: 'Dashboard', Icon: Home },
+  { view: 'pos', title: 'POS', Icon: Monitor },
+  { view: 'products', title: 'Products', Icon: ShoppingCart },
+  { view: 'inventory', title: 'Inventory', Icon: Package },
+  { view: 'ingredients', title: 'Ingredients', Icon: Coffee },
+  { view: 'recipes', title: 'Recipes (BOM)', Icon: ChefHat },
+  { view: 'suppliers', title: 'Suppliers', Icon: Truck },
+  { view: 'stock-transactions', title: 'Stock Transactions', Icon: ScanLine },
+  { view: 'sales', title: 'Sales & Reports', Icon: DollarSign },
+  { view: 'attendance', title: 'Attendance', Icon: ClipboardList },
+  { view: 'schedule', title: 'Schedule', Icon: Calendar },
+  { view: 'payroll', title: 'Payroll', Icon: DollarSign },
+  { view: 'expenses', title: 'Expenses', Icon: Activity },
+  { view: 'staff', title: 'Staff', Icon: Users },
+];
+
 const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onNavigate, currentView, isOpen, onClose }) => {
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer-alt' },
-    { id: 'pos', label: 'POS', icon: 'fa-cash-register' },
-    { id: 'products', label: 'Products', icon: 'fa-box' },
-    { id: 'inventory', label: 'Inventory', icon: 'fa-list' },
-    { id: 'ingredients', label: 'Ingredients', icon: 'fa-leaf' },
-    { id: 'recipes', label: 'Recipes (BOM)', icon: 'fa-utensils' },
-    { id: 'suppliers', label: 'Suppliers', icon: 'fa-truck' },
-    { id: 'stock-transactions', label: 'Stock Transactions', icon: 'fa-exchange-alt' },
-    { id: 'sales', label: 'Sales & Reports', icon: 'fa-chart-bar' },
-    { id: 'attendance', label: 'Attendance', icon: 'fa-clock' },
-    { id: 'schedule', label: 'Schedule', icon: 'fa-calendar-alt' },
-    { id: 'payroll', label: 'Payroll', icon: 'fa-wallet' },
-    { id: 'expenses', label: 'Expenses', icon: 'fa-receipt' },
-    { id: 'staff', label: 'Staff', icon: 'fa-users' },
-  ];
+  const [selected, setSelected] = useState(currentView);
 
   return (
     <>
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="fixed inset-0 z-40 bg-black/50"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white shadow-2xl z-50 transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-50 h-screen w-80 border-r border-gray-200 bg-white p-2 shadow-sm transition-transform duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } w-80`}
+        }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-              <i className="fas fa-coffee text-2xl text-green-500"></i>
-            </div>
+        <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4 dark:border-gray-800">
+          <div className="flex cursor-pointer items-center gap-3 rounded-md p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+            <Logo />
             <div>
-              <h1 className="text-xl font-bold text-gray-800">Sip Station</h1>
-              <p className="text-xs text-gray-500">Point of Sale</p>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Sip Station
+              </span>
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                Cafe POS
+              </span>
             </div>
+            <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 transition"
+            className="grid size-10 place-content-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
           >
-            <i className="fas fa-times text-gray-700 text-xl"></i>
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          <ul className="space-y-1 px-3">
-            {menuItems.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => {
-                    onNavigate(item.id as any);
-                    onClose();
-                  }}
-                  className={`flex items-center justify-between w-full px-4 py-3 rounded-xl transition ${
-                    currentView === item.id
-                      ? 'bg-green-50 text-green-600'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-                      <i className={`fas ${item.icon} ${currentView === item.id ? 'text-green-500' : 'text-green-500'}`}></i>
-                    </div>
-                    <span className="font-medium">{item.label}</span>
-                  </div>
-                  <i className="fas fa-chevron-right text-gray-400"></i>
-                </button>
-              </li>
-            ))}
-          </ul>
+        <nav className="mb-8 space-y-1">
+          {menuItems
+            .filter((item) => canAccess(user.role as Role, item.view))
+            .map((item) => (
+            <Option
+              key={item.view}
+              Icon={item.Icon}
+              title={item.title}
+              view={item.view}
+              selected={selected}
+              setSelected={setSelected}
+              onNavigate={onNavigate}
+              onClose={onClose}
+            />
+          ))}
         </nav>
 
         {/* Footer */}
-        <div className="p-5 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-              <i className="fas fa-user text-green-500"></i>
+        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 p-3 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-content-center rounded-lg bg-gray-100 dark:bg-gray-800">
+              <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-gray-800">{user.full_name}</p>
-              <p className="text-sm text-gray-500 capitalize">{user.role}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {user.full_name}
+              </p>
+              <p className="text-xs capitalize text-gray-500 dark:text-gray-400">
+                {user.role}
+              </p>
             </div>
+            <button
+              onClick={onLogout}
+              className="rounded-lg p-2 text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </aside>
     </>
+  );
+};
+
+const Option: React.FC<OptionProps> = ({
+  Icon,
+  title,
+  view,
+  selected,
+  setSelected,
+  onNavigate,
+  onClose,
+}) => {
+  const isSelected = selected === view;
+
+  return (
+    <button
+      onClick={() => {
+        setSelected(view);
+        onNavigate(view);
+        onClose();
+      }}
+      className={`relative flex h-11 w-full items-center rounded-md transition-all duration-200 ${
+        isSelected
+          ? 'border-l-2 border-blue-500 bg-blue-50 text-blue-700 shadow-sm dark:bg-blue-900/50 dark:text-blue-300'
+          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+      }`}
+    >
+      <div className="grid h-full w-12 place-content-center">
+        <Icon className="h-4 w-4" />
+      </div>
+      <span className="text-sm font-medium">{title}</span>
+    </button>
+  );
+};
+
+const Logo = () => {
+  return (
+    <div className="grid size-10 shrink-0 place-content-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm">
+      <Coffee className="h-5 w-5 text-white" />
+    </div>
   );
 };
 

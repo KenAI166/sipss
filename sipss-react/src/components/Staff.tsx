@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getStaff, saveStaff, deleteStaff } from '../utils/db';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
 interface StaffMember {
   id: number;
@@ -23,7 +24,7 @@ interface StaffProps {
 }
 
 const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'success' | 'error' | 'info'>('info');
@@ -163,52 +164,43 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
+          <div className="mb-8">
+            <Header title="Staff Management" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
               <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                onClick={handleAddStaff}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
               >
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
+                <i className="fas fa-plus mr-2"></i>
+                Add Staff
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-black">Staff Management</h1>
-                <p className="text-gray-600 text-sm">Manage employees</p>
-              </div>
             </div>
-            <button
-              onClick={handleAddStaff}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Add Staff
-            </button>
           </div>
         {/* Staff Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {staff.length > 0 ? staff.map((staffMember) => (
-            <div key={staffMember.id} className="bg-white rounded-lg shadow-sm p-6">
+            <div key={staffMember.id} className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <i className="fas fa-user text-green-500 text-xl"></i>
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                    <i className="fas fa-user text-blue-500 dark:text-blue-400 text-xl"></i>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-black">{staffMember.name}</h3>
-                    <p className="text-sm text-gray-500">{staffMember.position}</p>
+                    <h3 className="font-semibold text-black dark:text-white">{staffMember.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{staffMember.position}</p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleEditStaff(staffMember)}
-                    className="text-blue-600 hover:text-blue-900"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900"
                     title="Edit"
                   >
                     <i className="fas fa-edit"></i>
                   </button>
                   <button
                     onClick={() => handleDeleteStaff(staffMember.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-600 dark:text-red-400 hover:text-red-900"
                     title="Delete"
                   >
                     <i className="fas fa-trash"></i>
@@ -218,30 +210,30 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Age:</span>
-                  <span className="text-black">{staffMember.age || 'N/A'}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Age:</span>
+                  <span className="text-black dark:text-white">{staffMember.age || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Contact:</span>
-                  <span className="text-black">{staffMember.contact_number || 'N/A'}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Contact:</span>
+                  <span className="text-black dark:text-white">{staffMember.contact_number || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Hourly Rate:</span>
-                  <span className="text-black font-medium">{formatCurrency(staffMember.hourly_rate)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Hourly Rate:</span>
+                  <span className="text-black dark:text-white font-medium">{formatCurrency(staffMember.hourly_rate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">QR Code:</span>
-                  <span className="text-black font-mono text-xs">{staffMember.qr_code}</span>
+                  <span className="text-gray-500 dark:text-gray-400">QR Code:</span>
+                  <span className="text-black dark:text-white font-mono text-xs">{staffMember.qr_code}</span>
                 </div>
               </div>
             </div>
           )) : (
             <div className="col-span-full text-center py-12">
               <i className="fas fa-users text-gray-300 text-4xl mb-4"></i>
-              <p className="text-gray-500">No staff members yet</p>
+              <p className="text-gray-500 dark:text-gray-400">No staff members yet</p>
               <button
                 onClick={handleAddStaff}
-                className="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
+                className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
               >
                 Add First Staff Member
               </button>
@@ -254,14 +246,14 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
       {/* Add/Edit Staff Modal */}
       {modalVisible && !modalTitle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-black">
+              <h3 className="text-lg font-semibold text-black dark:text-white">
                 {editMode ? 'Edit Staff Member' : 'Add Staff Member'}
               </h3>
               <button
                 onClick={() => setModalVisible(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
@@ -269,63 +261,63 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Name *</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Name *</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter full name"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Age</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Age</label>
                 <input
                   type="number"
                   name="age"
                   value={formData.age}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter age"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Position *</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Position *</label>
                 <input
                   type="text"
                   name="position"
                   value={formData.position}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter position"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Contact Number</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Contact Number</label>
                 <input
                   type="text"
                   name="contact_number"
                   value={formData.contact_number}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter contact number"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-black mb-2">Hourly Rate *</label>
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">Hourly Rate *</label>
                 <input
                   type="number"
                   name="hourly_rate"
                   value={formData.hourly_rate}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter hourly rate"
                   step="0.01"
                   required
@@ -335,13 +327,13 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
               <div className="flex space-x-4">
                 <button
                   onClick={() => setModalVisible(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-black py-2 rounded-lg transition"
+                  className="flex-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 text-black dark:text-white py-2 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveStaff}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
                 >
                   {editMode ? 'Update' : 'Add'}
                 </button>
@@ -354,29 +346,29 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
       {/* Modal */}
       {modalVisible && modalTitle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center space-x-3 mb-4">
               {modalType === 'success' && (
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-check text-green-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
               {modalType === 'error' && (
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
                   <i className="fas fa-times text-red-500"></i>
                 </div>
               )}
               {modalType === 'info' && (
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-info text-blue-500"></i>
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-info text-blue-500 dark:text-blue-400"></i>
                 </div>
               )}
-              <h3 className="text-lg font-semibold text-black">{modalTitle}</h3>
+              <h3 className="text-lg font-semibold text-black dark:text-white">{modalTitle}</h3>
             </div>
-            <p className="text-gray-600 mb-6">{modalMessage}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{modalMessage}</p>
             <button
               onClick={() => setModalVisible(false)}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
             >
               OK
             </button>

@@ -13,6 +13,19 @@ app.use('*', cors({ origin: process.env.CORS_ORIGIN ?? '*' }))
 
 app.route('/attendance', attendance)
 
+// Role helpers — the authoritative role is the app_metadata.role JWT claim,
+// set only via the Admin API (server/scripts/create-users.js).
+const roleOf = (ctx) =>
+  ctx.userClaims?.app_metadata?.role ?? ctx.userClaims?.user_metadata?.role ?? null
+
+// Owner-only middleware: requires a valid user JWT whose role is 'owner'.
+const ownerOnly = async (c, next) => {
+  if (roleOf(c.var.supabaseContext) !== 'owner') {
+    return c.json({ success: false, message: 'Owner access required' }, 403)
+  }
+  return next()
+}
+
 // Public route — no auth
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
@@ -32,9 +45,9 @@ app.get('/catalog', withSupabase({ auth: 'publishable' }), async (c) => {
   return c.json(data)
 })
 
-// Admin route — requires the secret key in the apikey header;
-// supabaseAdmin bypasses RLS
-app.get('/admin/users', withSupabase({ auth: 'secret' }), async (c) => {
+// Admin route — requires a signed-in owner (CEO). The user's JWT is verified
+// and role-checked; supabaseAdmin (secret key, server-side only) bypasses RLS.
+app.get('/admin/users', withSupabase({ auth: 'user' }), ownerOnly, async (c) => {
   const { supabaseAdmin } = c.var.supabaseContext
   const { data, error } = await supabaseAdmin.auth.admin.listUsers()
   if (error) return c.json({ error: error.message }, 500)

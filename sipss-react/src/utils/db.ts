@@ -43,7 +43,7 @@ async function list<T = any>(key: string, localFn: () => Promise<T[]>, remoteFn:
     sync.cacheRows(key, rows);
     return rows;
   } catch (err) {
-    if (!sync.isNetworkError(err)) throw err;
+    console.warn(`Remote list for "${key}" failed, falling back to local data:`, err);
     return sync.readCachedRows<T>(key) ?? localFn();
   }
 }
@@ -53,7 +53,7 @@ async function one<T = any>(localFn: () => Promise<T>, remoteFn: () => Promise<T
   try {
     return await remoteFn();
   } catch (err) {
-    if (!sync.isNetworkError(err)) throw err;
+    console.warn('Remote one failed, falling back to local data:', err);
     return localFn();
   }
 }
@@ -65,10 +65,12 @@ async function save(key: string, name: string, payload: any, localFn: (p: any) =
     sync.upsertCached(key, res);
     return res;
   } catch (err) {
-    if (!sync.isNetworkError(err)) throw err;
+    console.warn(`Remote save for "${key}" failed, saving locally:`, err);
     const res = await localFn(payload);
     sync.upsertCached(key, res);
-    sync.enqueue({ fn: name, args: [payload], kind: 'save', create: payload?.id == null, localId: res?.id });
+    if (sync.isNetworkError(err)) {
+      sync.enqueue({ fn: name, args: [payload], kind: 'save', create: payload?.id == null, localId: res?.id });
+    }
     return res;
   }
 }
@@ -80,10 +82,12 @@ async function byId(key: string | null, name: string, id: number, localFn: (id: 
     if (key) { softPatch ? sync.patchCached(key, id, softPatch) : sync.removeCached(key, id); }
     return res;
   } catch (err) {
-    if (!sync.isNetworkError(err)) throw err;
+    console.warn(`Remote byId for "${key}" failed, using local data:`, err);
     const res = await localFn(id);
     if (key) { softPatch ? sync.patchCached(key, id, softPatch) : sync.removeCached(key, id); }
-    sync.enqueue({ fn: name, args: [id], kind: 'idOp' });
+    if (sync.isNetworkError(err)) {
+      sync.enqueue({ fn: name, args: [id], kind: 'idOp' });
+    }
     return res;
   }
 }
@@ -94,8 +98,7 @@ async function compound(localFn: () => Promise<any>, remoteFn: () => Promise<any
   try {
     return await remoteFn();
   } catch (err) {
-    if (!sync.isNetworkError(err)) throw err;
-    console.warn(`Offline: ${label} was applied locally only and will NOT auto-sync.`);
+    console.warn(`${label} remote call failed, using local:`, err);
     return localFn();
   }
 }

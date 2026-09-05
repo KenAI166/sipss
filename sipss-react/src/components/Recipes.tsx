@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import Header from './Header';
 import { getRecipes, getRecipeItems, saveRecipe, saveRecipeItem, deleteRecipe, deleteRecipeItem, getProducts, getIngredients } from '../utils/db';
 
 interface Product {
@@ -40,7 +41,7 @@ interface RecipesProps {
 }
 
 const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -240,25 +241,19 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
       
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100 transition">
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
+          <div className="mb-8">
+            <Header title="Recipes (BOM)" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <button onClick={handleAdd} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                <i className="fas fa-plus mr-2"></i>Add Recipe
               </button>
-              <div>
-                <h1 className="text-3xl font-bold text-black">Recipes (BOM)</h1>
-                <p className="text-gray-600">Manage product ingredients and portions</p>
-              </div>
             </div>
-            <button onClick={handleAdd} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition">
-              <i className="fas fa-plus mr-2"></i>Add Recipe
-            </button>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-green-500 text-white">
+                <thead className="bg-blue-500 text-white">
                   <tr>
                     <th className="px-6 py-4 text-left font-medium">Product</th>
                     <th className="px-6 py-4 text-left font-medium">Yield Quantity</th>
@@ -270,7 +265,7 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {recipes.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                         No recipes found. Click "Add Recipe" to create one.
                       </td>
                     </tr>
@@ -278,21 +273,21 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                     recipes.map(recipe => (
                       <tr key={recipe.id} className="border-b hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <p className="font-medium text-black">{recipe.product_name}</p>
+                          <p className="font-medium text-black dark:text-white">{recipe.product_name}</p>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{recipe.yield_quantity}</td>
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{recipe.yield_quantity}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
                           <button
                             onClick={() => handleManageItems(recipe)}
-                            className="text-blue-500 hover:text-blue-700 font-medium"
+                            className="text-blue-500 dark:text-blue-400 hover:text-blue-700 font-medium"
                           >
                             Manage Ingredients
                           </button>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{recipe.notes || '-'}</td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{recipe.notes || '-'}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
-                            <button onClick={() => handleEdit(recipe)} className="text-blue-500 hover:text-blue-700">
+                            <button onClick={() => handleEdit(recipe)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700">
                               <i className="fas fa-edit"></i>
                             </button>
                             <button onClick={() => handleDelete(recipe.id)} className="text-red-500 hover:text-red-700">
@@ -312,12 +307,12 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl p-6 mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-black">
+              <h2 className="text-2xl font-bold text-black dark:text-white">
                 {editingRecipe ? 'Edit Recipe' : 'Add Recipe'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-black">
+              <button onClick={() => setShowModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white">
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
@@ -325,12 +320,12 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
             <form onSubmit={handleSave}>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Product *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Product *</label>
                   <select
                     value={formData.product_id}
                     onChange={handleProductChange}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select a product</option>
                     {products.map(product => (
@@ -340,24 +335,24 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Yield Quantity *</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Yield Quantity *</label>
                   <input
                     type="number"
                     min="1"
                     value={formData.yield_quantity}
                     onChange={(e) => setFormData({ ...formData, yield_quantity: e.target.value })}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Number of products this recipe makes</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Number of products this recipe makes</p>
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Notes</label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
                   />
                 </div>
@@ -367,13 +362,13 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-black transition"
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition"
                 >
                   {editingRecipe ? 'Update' : 'Save'}
                 </button>
@@ -385,26 +380,26 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
 
       {showItemsModal && selectedRecipe && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-black">Recipe Ingredients</h2>
-                <p className="text-gray-600">{selectedRecipe.product_name} - Yield: {selectedRecipe.yield_quantity}</p>
+                <h2 className="text-2xl font-bold text-black dark:text-white">Recipe Ingredients</h2>
+                <p className="text-gray-600 dark:text-gray-400">{selectedRecipe.product_name} - Yield: {selectedRecipe.yield_quantity}</p>
               </div>
-              <button onClick={() => setShowItemsModal(false)} className="text-gray-500 hover:text-black">
+              <button onClick={() => setShowItemsModal(false)} className="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white">
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
 
-            <form onSubmit={handleAddItem} className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <form onSubmit={handleAddItem} className="mb-6 p-4 bg-gray-50 dark:bg-gray-950 rounded-lg">
               <div className="grid grid-cols-4 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-black mb-1">Ingredient</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Ingredient</label>
                   <select
                     value={itemFormData.ingredient_id}
                     onChange={handleIngredientChange}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select ingredient</option>
                     {ingredients.map(ingredient => (
@@ -413,30 +408,30 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Quantity</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Quantity</label>
                   <input
                     type="number"
                     step="0.01"
                     value={itemFormData.quantity}
                     onChange={(e) => setItemFormData({ ...itemFormData, quantity: e.target.value })}
                     required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1">Unit</label>
+                  <label className="block text-sm font-medium text-black dark:text-white mb-1">Unit</label>
                   <input
                     type="text"
                     value={itemFormData.unit}
                     onChange={(e) => setItemFormData({ ...itemFormData, unit: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
               <div className="mt-4 flex justify-end">
                 <button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition"
                 >
                   Add to Recipe
                 </button>
@@ -445,7 +440,7 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-100">
+                <thead className="bg-gray-100 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Ingredient</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Quantity</th>
@@ -456,16 +451,16 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                 <tbody>
                   {recipeItems.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-4 text-center text-gray-500">
+                      <td colSpan={4} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
                         No ingredients added to this recipe yet.
                       </td>
                     </tr>
                   ) : (
                     recipeItems.map(item => (
                       <tr key={item.id} className="border-b">
-                        <td className="px-4 py-3 text-black">{item.ingredient_name}</td>
-                        <td className="px-4 py-3 text-gray-600">{item.quantity}</td>
-                        <td className="px-4 py-3 text-gray-600">{item.unit}</td>
+                        <td className="px-4 py-3 text-black dark:text-white">{item.ingredient_name}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{item.quantity}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{item.unit}</td>
                         <td className="px-4 py-3">
                           <button onClick={() => handleDeleteItem(item.id)} className="text-red-500 hover:text-red-700">
                             <i className="fas fa-trash"></i>
@@ -481,7 +476,7 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setShowItemsModal(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-6 rounded-lg transition"
+                className="bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 text-black dark:text-white font-bold py-2 px-6 rounded-lg transition"
               >
                 Done
               </button>

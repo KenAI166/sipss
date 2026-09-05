@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import Header from './Header';
 import { getProducts, saveSale, saveProduct, deductStockForSale } from '../utils/db';
 
 interface Product {
@@ -28,7 +29,7 @@ interface POSProps {
 }
 
 const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -171,40 +172,28 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
     <div className="flex h-screen overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="pos" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
         {/* Header */}
-        <div className="bg-white shadow-sm p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
-              >
-                <i className="fas fa-bars text-gray-700 text-xl"></i>
-              </button>
-              <h1 className="text-xl font-bold text-black">Point of Sale</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-64"
-                />
-                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-gray-600 text-sm">Cashier:</span>
-                <span className="font-medium text-black text-sm">Admin</span>
-              </div>
-            </div>
+        <Header title="Point of Sale" onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <div className="p-4 mb-6 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-900 border-b">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+            />
+            <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-600 dark:text-gray-400 text-sm">Cashier:</span>
+            <span className="font-medium text-black dark:text-white text-sm">Admin</span>
           </div>
         </div>
 
         {/* Category Filters */}
-        <div className="bg-white border-b p-4">
+        <div className="bg-white dark:bg-gray-900 border-b p-4">
           <div className="flex items-center space-x-2 overflow-x-auto">
             {categories.map(category => (
               <button
@@ -212,8 +201,8 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
                 onClick={() => setSelectedCategory(category.toLowerCase())}
                 className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition ${
                   selectedCategory === category.toLowerCase()
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-black hover:bg-green-500 hover:text-white'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-800 text-black dark:text-white hover:bg-blue-500 hover:text-white'
                 }`}
               >
                 {category}
@@ -229,7 +218,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
               <div
                 key={product.id}
                 onClick={() => addToCart(product)}
-                className="product-card bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer transform hover:scale-105 transition"
+                className="product-card bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden cursor-pointer transform hover:scale-105 transition"
               >
                 <div className="p-4">
                   <div
@@ -244,13 +233,13 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
                     } flex items-center justify-center mb-3`}
                     style={{ backgroundColor: product.color || '#22c55e' }}
                   >
-                    <i className="fas fa-coffee text-4xl text-gray-600"></i>
+                    <i className="fas fa-coffee text-4xl text-gray-600 dark:text-gray-400"></i>
                   </div>
-                  <h3 className="font-bold text-black mb-1 text-sm">{product.name}</h3>
-                  <p className="text-xs text-gray-500 mb-2">{product.category}</p>
+                  <h3 className="font-bold text-black dark:text-white mb-1 text-sm">{product.name}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{product.category}</p>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-green-600 text-sm">₱{product.price.toFixed(2)}</span>
-                    <span className={`text-xs ${product.stock <= 10 ? 'text-red-500' : 'text-gray-500'}`}>
+                    <span className="font-bold text-blue-600 dark:text-blue-400 text-sm">₱{product.price.toFixed(2)}</span>
+                    <span className={`text-xs ${product.stock <= 10 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
                       {product.stock} left
                     </span>
                   </div>
@@ -262,36 +251,36 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
       </div>
 
       {/* Cart Section */}
-      <div className="w-96 bg-white border-l flex flex-col">
+      <div className="w-96 bg-white dark:bg-gray-900 border-l flex flex-col">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-bold text-black">Current Order</h2>
+          <h2 className="text-lg font-bold text-black dark:text-white">Current Order</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
           {cart.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
               <i className="fas fa-shopping-cart text-4xl mb-4"></i>
               <p>Your cart is empty</p>
             </div>
           ) : (
             <div className="space-y-3">
               {cart.map((item) => (
-                <div key={item.product.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                <div key={item.product.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-950 p-3 rounded-lg">
                   <div className="flex-1">
-                    <h4 className="font-medium text-black text-sm">{item.product.name}</h4>
-                    <p className="text-xs text-gray-500">₱{item.product.price.toFixed(2)}</p>
+                    <h4 className="font-medium text-black dark:text-white text-sm">{item.product.name}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">₱{item.product.price.toFixed(2)}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                      className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded flex items-center justify-center hover:bg-gray-300"
                     >
                       -
                     </button>
                     <span className="w-8 text-center">{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center hover:bg-gray-300"
+                      className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded flex items-center justify-center hover:bg-gray-300"
                     >
                       +
                     </button>
@@ -310,23 +299,23 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
 
         <div className="p-4 border-t space-y-3">
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Customer Name</label>
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">Customer Name</label>
             <input
               type="text"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter customer name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Discount (%)</label>
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">Discount (%)</label>
             <input
               type="number"
               value={discount}
               onChange={(e) => setDiscount(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0"
               min="0"
               max="100"
@@ -334,11 +323,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Payment Method</label>
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">Payment Method</label>
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="cash">Cash</option>
               <option value="card">Card</option>
@@ -347,11 +336,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Notes</label>
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={2}
               placeholder="Additional notes"
             />
@@ -359,26 +348,26 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
 
           <div className="border-t pt-3 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="text-black">₱{subtotal.toFixed(2)}</span>
+              <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+              <span className="text-black dark:text-white">₱{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Tax (12%)</span>
-              <span className="text-black">₱{tax.toFixed(2)}</span>
+              <span className="text-gray-600 dark:text-gray-400">Tax (12%)</span>
+              <span className="text-black dark:text-white">₱{tax.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Discount</span>
-              <span className="text-red-600">-₱{discountAmount.toFixed(2)}</span>
+              <span className="text-gray-600 dark:text-gray-400">Discount</span>
+              <span className="text-red-600 dark:text-red-400">-₱{discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold">
-              <span className="text-black">Total</span>
-              <span className="text-green-600">₱{total.toFixed(2)}</span>
+              <span className="text-black dark:text-white">Total</span>
+              <span className="text-blue-600 dark:text-blue-400">₱{total.toFixed(2)}</span>
             </div>
           </div>
 
           <button
             onClick={handleCheckout}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition"
           >
             <i className="fas fa-check mr-2"></i>
             Complete Order
