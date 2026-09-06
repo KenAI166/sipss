@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { getProducts, saveSale, saveProduct, deductStockForSale } from '../utils/db';
+import Receipt, { ReceiptData } from './Receipt';
+import { getProducts, completeOrder, onSynced } from '../utils/db';
 
 interface Product {
   id: number;
@@ -29,15 +31,30 @@ interface POSProps {
 }
 
 const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState('none');
+  const [customDiscount, setCustomDiscount] = useState(0);
+  const [taxEnabled, setTaxEnabled] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'success' | 'error' | 'info'>('info');
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+
+  const showModal = (type: 'success' | 'error' | 'info', title: string, message: string) => {
+    setModalType(type);
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
 
   const categories = ['All', 'Coffee', 'Tea', 'Pastries', 'Snacks'];
 
@@ -52,6 +69,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
       }
     };
     loadProducts();
+    return onSynced(loadProducts);
   }, []);
 
   const filteredProducts = products.filter(product => {
@@ -91,16 +109,32 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const tax = subtotal * 0.12;
-  const discountAmount = subtotal * (discount / 100);
+
+  const discountOptions = [
+    { value: 'none', label: 'None', percent: 0 },
+    { value: 'senior', label: 'Senior Citizen (20%)', percent: 20 },
+    { value: 'pwd', label: 'PWD (20%)', percent: 20 },
+    { value: 'student', label: 'Student (10%)', percent: 10 },
+    { value: 'custom', label: 'Custom', percent: null },
+  ];
+
+  const selectedDiscount = discountOptions.find(option => option.value === discountType);
+  const discountPercent = discountType === 'custom' ? Math.max(0, Math.min(100, customDiscount)) : (selectedDiscount?.percent ?? 0);
+  const discountLabel = discountType === 'custom'
+    ? `Custom (${discountPercent}%)`
+    : (selectedDiscount?.label ?? 'None');
+  const discountAmount = subtotal * (discountPercent / 100);
+  const tax = taxEnabled ? subtotal * 0.12 : 0;
   const total = subtotal + tax - discountAmount;
 
   const handleCheckout = async () => {
+    if (isProcessing) return;
     if (cart.length === 0) {
-      alert('Your cart is empty!');
+      showModal('info', 'Cart Empty', 'Your cart is empty!');
       return;
     }
 
+    setIsProcessing(true);
     try {
       const receiptNumber = `REC-${Date.now()}`;
       const items = cart.map(item => ({
@@ -111,34 +145,14 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
         subtotal: item.product.price * item.quantity
       }));
 
-      // Deduct ingredient stock for each cart item
-      let stockMessages: string[] = [];
-      for (const cartItem of cart) {
-        const result = await deductStockForSale(
-          cartItem.product.id,
-          cartItem.quantity,
-          receiptNumber,
-          user.full_name
-        );
-        if (!result.success) {
-          alert(`Stock error: ${result.message}`);
-          return;
-        }
-        if (result.message) {
-          stockMessages.push(`${cartItem.product.name}: ${result.message}`);
-        }
-
-        // Update product stock
-        const updatedProduct = { ...cartItem.product, stock: cartItem.product.stock - cartItem.quantity };
-        await saveProduct(updatedProduct);
-      }
-
       const sale = {
         receipt_number: receiptNumber,
         items: JSON.stringify(items),
         subtotal: subtotal,
         tax: tax,
+        tax_enabled: taxEnabled,
         discount: discountAmount,
+        discount_type: discountLabel,
         total: total,
         payment_method: paymentMethod,
         customer_name: customerName,
@@ -147,43 +161,51 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
         created_at: new Date().toISOString()
       };
 
-      await saveSale(sale);
-      
+      // Single round-trip: the process_sale Postgres function validates stock,
+      // inserts the sale, deducts ingredients, and logs transactions
+      // atomically. Falls back to the local multi-step path when offline.
+      const result = await completeOrder(sale, cart, user.full_name);
+      if (!result.success) {
+        showModal('error', 'Stock Error', result.message);
+        return;
+      }
+
       // Reload products to reflect stock changes
       const updatedProducts = await getProducts();
       setProducts(updatedProducts);
-      
-      if (stockMessages.length > 0) {
-        console.log('Stock deductions:', stockMessages);
-      }
-      
-      alert(`Checkout successful! Total: ₱${total.toFixed(2)}`);
+
+      setReceipt({ ...sale, items });
       setCart([]);
-      setDiscount(0);
+      setDiscountType('none');
+      setCustomDiscount(0);
+      setTaxEnabled(true);
       setCustomerName('');
       setNotes('');
     } catch (error) {
       console.error('Error saving sale:', error);
-      alert('Error processing sale. Please try again.');
+      showModal('error', 'Error', 'Error processing sale. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="pos" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
-      <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
-        {/* Header */}
-        <Header title="Point of Sale" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
-        <div className="p-4 mb-6 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-900 border-b">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-            />
+
+      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col bg-white dark:bg-gray-900">
+          {/* Header */}
+          <Header title="Point of Sale" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
+          <div className="p-4 mb-6 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-900 border-b">
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
           </div>
           <div className="flex items-center space-x-2">
@@ -212,8 +234,8 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
         </div>
 
         {/* Products Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredProducts.map(product => (
               <div
                 key={product.id}
@@ -251,7 +273,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
       </div>
 
       {/* Cart Section */}
-      <div className="w-96 bg-white dark:bg-gray-900 border-l flex flex-col">
+        <div className="w-full md:w-96 bg-white dark:bg-gray-900 border-t md:border-t-0 md:border-l flex flex-col">
         <div className="p-4 border-b">
           <h2 className="text-lg font-bold text-black dark:text-white">Current Order</h2>
         </div>
@@ -310,16 +332,42 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-black dark:text-white mb-1">Discount (%)</label>
-            <input
-              type="number"
-              value={discount}
-              onChange={(e) => setDiscount(Number(e.target.value))}
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">Discount Type</label>
+            <select
+              value={discountType}
+              onChange={(e) => setDiscountType(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="0"
-              min="0"
-              max="100"
+            >
+              {discountOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {discountType === 'custom' && (
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-1">Custom Discount (%)</label>
+              <input
+                type="number"
+                value={customDiscount}
+                onChange={(e) => setCustomDiscount(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-black dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0"
+                min="0"
+                max="100"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center">
+            <input
+              id="apply-tax"
+              type="checkbox"
+              checked={taxEnabled}
+              onChange={(e) => setTaxEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
+            <label htmlFor="apply-tax" className="ml-2 text-sm text-black dark:text-white">Apply Tax (12%)</label>
           </div>
 
           <div>
@@ -351,14 +399,18 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
               <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
               <span className="text-black dark:text-white">₱{subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Tax (12%)</span>
-              <span className="text-black dark:text-white">₱{tax.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Discount</span>
-              <span className="text-red-600 dark:text-red-400">-₱{discountAmount.toFixed(2)}</span>
-            </div>
+            {taxEnabled && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Tax (12%)</span>
+                <span className="text-black dark:text-white">₱{tax.toFixed(2)}</span>
+              </div>
+            )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Discount - {discountLabel}</span>
+                <span className="text-red-600 dark:text-red-400">-₱{discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold">
               <span className="text-black dark:text-white">Total</span>
               <span className="text-blue-600 dark:text-blue-400">₱{total.toFixed(2)}</span>
@@ -367,10 +419,11 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
 
           <button
             onClick={handleCheckout}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition"
+            disabled={isProcessing}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <i className="fas fa-check mr-2"></i>
-            Complete Order
+            <i className={`fas ${isProcessing ? 'fa-spinner fa-spin' : 'fa-check'} mr-2`}></i>
+            {isProcessing ? 'Processing...' : 'Complete Order'}
           </button>
 
           {cart.length > 0 && (
@@ -384,6 +437,42 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
           )}
         </div>
       </div>
+    </div>
+
+      {receipt && <Receipt receipt={receipt} onClose={() => setReceipt(null)} />}
+
+      {/* Modal */}
+      {modalVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              {modalType === 'success' && (
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-blue-500 dark:text-blue-400"></i>
+                </div>
+              )}
+              {modalType === 'error' && (
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-times text-red-500"></i>
+                </div>
+              )}
+              {modalType === 'info' && (
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-info text-blue-500 dark:text-blue-400"></i>
+                </div>
+              )}
+              <h3 className="text-lg font-semibold text-black dark:text-white">{modalTitle}</h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line mb-6">{modalMessage}</p>
+            <button
+              onClick={() => setModalVisible(false)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

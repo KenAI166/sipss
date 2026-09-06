@@ -140,6 +140,61 @@ create policy "products_all_auth" on public.products
   with check (auth.role() = 'authenticated');
 
 -- =============================================================================
+-- Staff + Payroll
+-- Payroll is generated from attendance rows (attendance.staff_id +
+-- time_in/time_out/break_start/break_end) × staff.hourly_rate.
+-- Payroll delete is a soft delete via deleted_at.
+-- =============================================================================
+
+create table if not exists public.staff (
+  id             bigint generated always as identity primary key,
+  name           text not null,
+  age            integer,
+  position       text,
+  contact_number text,
+  qr_code        text unique,
+  hourly_rate    numeric(10,2) not null default 0,
+  created_at     timestamptz not null default now()
+);
+
+alter table public.staff enable row level security;
+
+create policy "staff_all_auth" on public.staff
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create table if not exists public.payroll (
+  id                bigint generated always as identity primary key,
+  staff_id          bigint not null,
+  staff_name        text not null,
+  period_start      date not null,
+  period_end        date not null,
+  total_hours       numeric(10,2) not null default 0,
+  total_break_hours numeric(10,2) not null default 0,
+  net_hours         numeric(10,2) not null default 0,
+  gross_pay         numeric(10,2) not null default 0,
+  deductions        numeric(10,2) not null default 0,
+  late_deductions   numeric(10,2) not null default 0,
+  days_present      integer not null default 0,
+  days_absent       integer not null default 0,
+  days_late         integer not null default 0,
+  net_pay           numeric(10,2) not null default 0,
+  status            text not null default 'pending' check (status in ('pending','approved','paid')),
+  deleted_at        timestamptz,
+  created_at        timestamptz not null default now()
+);
+
+create index if not exists idx_payroll_staff_id on public.payroll (staff_id);
+create index if not exists idx_payroll_period on public.payroll (period_start, period_end);
+create index if not exists idx_payroll_deleted_at on public.payroll (deleted_at);
+
+alter table public.payroll enable row level security;
+
+create policy "payroll_all_auth" on public.payroll
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+-- =============================================================================
 -- Transactions
 -- A unified transaction log for auditing and recent activity. The app records
 -- major events (sales, attendance, expenses, stock, payroll) here in addition
@@ -165,5 +220,99 @@ create index if not exists idx_transactions_created_at on public.transactions (c
 alter table public.transactions enable row level security;
 
 create policy "transactions_all_auth" on public.transactions
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+-- =============================================================================
+-- Ingredients + Recipes
+-- Raw materials used by recipes. Each product can have a recipe; when a product
+-- is sold via the POS, the ingredient quantities are deducted automatically.
+-- Also tracks stock_transactions for audit logs.
+-- =============================================================================
+
+create table if not exists public.ingredients (
+  id               bigint generated always as identity primary key,
+  name             text not null,
+  category         text default 'general',
+  unit             text default 'pcs',
+  current_quantity numeric(10,2) default 0,
+  minimum_quantity numeric(10,2) default 10,
+  reorder_quantity numeric(10,2) default 0,
+  cost_per_unit    numeric(10,2) default 0,
+  supplier_id      bigint,
+  expiry_date      date,
+  notes            text,
+  created_at       timestamptz not null default now()
+);
+
+create index if not exists idx_ingredients_name on public.ingredients (name);
+create index if not exists idx_ingredients_category on public.ingredients (category);
+
+alter table public.ingredients enable row level security;
+
+create policy "ingredients_all_auth" on public.ingredients
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create table if not exists public.recipes (
+  id             bigint generated always as identity primary key,
+  product_id     bigint not null references public.products(id) on delete cascade,
+  product_name   text not null,
+  yield_quantity integer not null default 1,
+  notes          text,
+  created_at     timestamptz not null default now()
+);
+
+create index if not exists idx_recipes_product_id on public.recipes (product_id);
+
+alter table public.recipes enable row level security;
+
+create policy "recipes_all_auth" on public.recipes
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create table if not exists public.recipe_items (
+  id            bigint generated always as identity primary key,
+  recipe_id     bigint not null references public.recipes(id) on delete cascade,
+  ingredient_id bigint not null references public.ingredients(id) on delete cascade,
+  quantity      numeric(10,2) not null,
+  unit          text default 'pcs',
+  notes         text
+);
+
+create index if not exists idx_recipe_items_recipe_id on public.recipe_items (recipe_id);
+
+create index if not exists idx_recipe_items_ingredient_id on public.recipe_items (ingredient_id);
+
+alter table public.recipe_items enable row level security;
+
+create policy "recipe_items_all_auth" on public.recipe_items
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create table if not exists public.stock_transactions (
+  id              bigint generated always as identity primary key,
+  ingredient_id   bigint references public.ingredients(id) on delete set null,
+  ingredient_name text,
+  transaction_type text not null,
+  quantity        numeric(10,2) not null,
+  quantity_before numeric(10,2) not null,
+  quantity_after  numeric(10,2) not null,
+  reference_id    text,
+  reference_type  text,
+  reason          text,
+  cost_per_unit   numeric(10,2) default 0,
+  total_cost      numeric(10,2) default 0,
+  notes           text,
+  created_by      text,
+  created_at      timestamptz not null default now()
+);
+
+create index if not exists idx_stock_transactions_ingredient_id on public.stock_transactions (ingredient_id);
+create index if not exists idx_stock_transactions_created_at on public.stock_transactions (created_at desc);
+
+alter table public.stock_transactions enable row level security;
+
+create policy "stock_transactions_all_auth" on public.stock_transactions
   for all using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');

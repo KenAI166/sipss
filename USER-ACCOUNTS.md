@@ -48,7 +48,7 @@ systems — all day-to-day operations:
 | Sales & Reports | ✅ View & operate |
 | Attendance / Schedule | ✅ Full (approve, manage shifts) |
 | Expenses | ✅ Full |
-| Payroll | ❌ Owner only |
+| Payroll | ✅ Full |
 | Staff / User management | ❌ Owner only |
 
 **Rule of thumb:** the manager runs daily operations; money-out and

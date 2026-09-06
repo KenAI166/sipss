@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getStaff, saveStaff, deleteStaff } from '../utils/db';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
+import { getStaff, saveStaff, deleteStaff, onSynced } from '../utils/db';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -24,7 +25,7 @@ interface StaffProps {
 }
 
 const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'success' | 'error' | 'info'>('info');
@@ -43,6 +44,7 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
 
   useEffect(() => {
     loadStaff();
+    return onSynced(loadStaff);
   }, []);
 
   const loadStaff = async () => {
@@ -162,7 +164,7 @@ const Staff: React.FC<StaffProps> = ({ user, onLogout, onNavigate }) => {
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="staff" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header */}
           <div className="mb-8">
             <Header title="Staff Management" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />

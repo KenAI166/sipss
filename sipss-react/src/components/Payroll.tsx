@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getPayroll, savePayroll, calculatePayrollForPeriod, getStaff, deletePayroll, restorePayroll, getDeletedPayroll } from '../utils/db';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
+import { getPayroll, savePayroll, calculatePayrollForPeriod, getStaff, getAttendance, deletePayroll, restorePayroll, getDeletedPayroll, onSynced } from '../utils/db';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -41,7 +42,7 @@ interface PayrollProps {
 }
 
 const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [payroll, setPayroll] = useState<PayrollRecord[]>([]);
   const [deletedPayroll, setDeletedPayroll] = useState<PayrollRecord[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -57,11 +58,13 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [previewPayroll, setPreviewPayroll] = useState<any>(null);
+  const [staffAttendance, setStaffAttendance] = useState<any[]>([]);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    loadPayroll();
-    loadDeletedPayroll();
-    loadStaff();
+    const reload = () => { loadPayroll(); loadDeletedPayroll(); loadStaff(); };
+    reload();
+    return onSynced(reload);
   }, []);
 
   const loadPayroll = async () => {
@@ -118,34 +121,43 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
       return;
     }
 
+    setGenerating(true);
     try {
       const { start, end } = getPeriodDates();
       const staffMember = staff.find(s => s.id === selectedStaff);
-      if (staffMember) {
-        const payrollData = await calculatePayrollForPeriod(selectedStaff, start, end);
-        setPreviewPayroll(payrollData);
+      if (!staffMember) {
+        throw new Error('Staff record not found. Please re-select the staff member.');
       }
-      
+      // Load this staff member's attendance for the calendar view
+      const attendance = await getAttendance();
+      setStaffAttendance(attendance.filter((a: any) => a.staff_id === selectedStaff));
+
+      const payrollData = await calculatePayrollForPeriod(selectedStaff, start, end);
+      setPreviewPayroll(payrollData);
       setGenerateModalVisible(true);
     } catch (error) {
       console.error('Error loading attendance:', error);
       setModalType('error');
       setModalTitle('Error');
-      setModalMessage('Failed to load attendance data');
+      setModalMessage(error instanceof Error ? error.message : 'Failed to load attendance data');
       setModalVisible(true);
+    } finally {
+      setGenerating(false);
     }
   };
 
   const handleConfirmPayroll = async () => {
-    if (!selectedStaff) return;
+    if (!selectedStaff || generating) return;
 
+    setGenerating(true);
     try {
       const { start, end } = getPeriodDates();
       const payrollData = await calculatePayrollForPeriod(selectedStaff, start, end);
       await savePayroll(payrollData);
       await loadPayroll();
       setGenerateModalVisible(false);
-      
+      setPreviewPayroll(null);
+
       setModalType('success');
       setModalTitle('Success');
       setModalMessage('Payroll generated successfully');
@@ -154,8 +166,10 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
       console.error('Error generating payroll:', error);
       setModalType('error');
       setModalTitle('Error');
-      setModalMessage('Failed to generate payroll. Please try again.');
+      setModalMessage(error instanceof Error ? error.message : 'Failed to generate payroll. Please try again.');
       setModalVisible(true);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -239,6 +253,43 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+  // --- Attendance calendar helpers (ported from sipss-native payroll) --------
+
+  // Attendance `date` values are 'YYYY-MM-DD' strings; compare on a consistent
+  // UTC key so local timezone offsets can't shift a record onto another day.
+  const dateKey = (d: Date) => d.toISOString().split('T')[0];
+
+  const getDaysInPeriod = () => {
+    const { start, end } = getPeriodDates();
+    const days: Date[] = [];
+    const current = new Date(start + 'T00:00:00Z');
+    const endDate = new Date(end + 'T00:00:00Z');
+    while (current <= endDate) {
+      days.push(new Date(current));
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+    return days;
+  };
+
+  const getAttendanceStatus = (day: Date): 'present' | 'absent' | 'late' => {
+    const record = staffAttendance.find((a: any) => a.date === dateKey(day));
+    if (!record || !record.time_in) return 'absent';
+    // Same rule as calculatePayrollForPeriod: time-in after 9:00 AM is late
+    const [h, m] = String(record.time_in).split(':').map(Number);
+    return h >= 9 && m > 0 ? 'late' : 'present';
+  };
+
+  const getAttendanceCount = () => {
+    let present = 0, absent = 0, late = 0;
+    getDaysInPeriod().forEach(day => {
+      const status = getAttendanceStatus(day);
+      if (status === 'present') present++;
+      else if (status === 'late') late++;
+      else absent++;
+    });
+    return { present, absent, late };
+  };
+
   const displayedPayroll = showDeleted ? deletedPayroll : payroll;
 
   return (
@@ -246,7 +297,7 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="payroll" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header */}
           <div className="mb-8">
             <Header title="Payroll" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
@@ -258,7 +309,7 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
                 {showDeleted ? 'Show Active' : 'Show Deleted'}
               </button>
               <button
-                onClick={() => setGenerateModalVisible(true)}
+                onClick={() => { setPreviewPayroll(null); setGenerateModalVisible(true); }}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
               >
                 <i className="fas fa-plus mr-2"></i>
@@ -364,7 +415,7 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-black dark:text-white">Generate Payroll</h3>
               <button
-                onClick={() => setGenerateModalVisible(false)}
+                onClick={() => { setGenerateModalVisible(false); setPreviewPayroll(null); }}
                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600"
               >
                 <i className="fas fa-times text-xl"></i>
@@ -389,7 +440,7 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-black dark:text-white mb-2">Month</label>
                     <select
@@ -444,16 +495,106 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
 
                 <button
                   onClick={handleGeneratePayroll}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
+                  disabled={generating}
+                  className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white py-2 rounded-lg transition"
                 >
-                  Preview Payroll
+                  {generating ? 'Generating preview...' : 'Preview Payroll'}
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Attendance Calendar (from sipss-native) */}
+                <div className="bg-gray-50 dark:bg-gray-950 rounded-lg p-4">
+                  <h4 className="font-semibold text-black dark:text-white mb-1">
+                    {staff.find(s => s.id === selectedStaff)?.name}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {monthNames[selectedMonth]} {selectedYear} — {selectedPeriod === '1-15' ? '1st–15th' : '16th–End'}
+                  </p>
+
+                  <div className="flex items-center gap-4 mb-4 text-sm">
+                    <span className="flex items-center gap-2 text-black dark:text-white">
+                      <span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                      Present: {getAttendanceCount().present}
+                    </span>
+                    <span className="flex items-center gap-2 text-black dark:text-white">
+                      <span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                      Absent: {getAttendanceCount().absent}
+                    </span>
+                    <span className="flex items-center gap-2 text-black dark:text-white">
+                      <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                      Late: {getAttendanceCount().late}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-8 gap-2">
+                    {getDaysInPeriod().map((day, index) => {
+                      const status = getAttendanceStatus(day);
+                      const record = staffAttendance.find((a: any) => a.date === dateKey(day));
+                      const circleColor =
+                        status === 'present' ? 'bg-green-500 text-white' :
+                        status === 'late' ? 'bg-yellow-500 text-white' :
+                        'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400';
+                      return (
+                        <div key={index} className="flex flex-col items-center gap-1">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium ${circleColor}`}>
+                            {day.getUTCDate()}
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {day.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })}
+                          </span>
+                          {record?.time_in && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{record.time_in}</span>
+                          )}
+                          {status === 'late' && (
+                            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">Late</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Absence Report */}
+                {getAttendanceCount().absent > 0 && (
+                  <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-4">
+                    <h4 className="font-semibold text-red-700 dark:text-red-300 mb-2">Absence Report</h4>
+                    <div className="space-y-1 text-sm">
+                      {getDaysInPeriod()
+                        .filter(day => getAttendanceStatus(day) === 'absent')
+                        .map((day, index) => (
+                          <div key={index} className="flex justify-between text-red-600 dark:text-red-400">
+                            <span>{day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}</span>
+                            <span>Absent</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Late Arrivals Report */}
+                {getAttendanceCount().late > 0 && (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-4">
+                    <h4 className="font-semibold text-yellow-700 dark:text-yellow-300 mb-2">Late Arrivals Report</h4>
+                    <div className="space-y-1 text-sm">
+                      {getDaysInPeriod()
+                        .filter(day => getAttendanceStatus(day) === 'late')
+                        .map((day, index) => {
+                          const record = staffAttendance.find((a: any) => a.date === dateKey(day));
+                          return (
+                            <div key={index} className="flex justify-between text-yellow-700 dark:text-yellow-400">
+                              <span>{day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}</span>
+                              <span>Time in: {record?.time_in}</span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-gray-50 dark:bg-gray-950 rounded-lg p-4">
                   <h4 className="font-semibold text-black dark:text-white mb-4">Payroll Preview</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Staff Name</p>
                       <p className="font-medium text-black dark:text-white">{previewPayroll.staff_name}</p>
@@ -473,6 +614,16 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Net Hours</p>
                       <p className="font-medium text-black dark:text-white">{formatHours(previewPayroll.net_hours)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400">Hourly Rate</p>
+                      <p className="font-medium text-black dark:text-white">
+                        {formatCurrency(
+                          (staff.find(s => s.id === selectedStaff)?.hourly_rate ?? 0) > 0
+                            ? staff.find(s => s.id === selectedStaff)!.hourly_rate
+                            : 56
+                        )}/hr
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500 dark:text-gray-400">Days Present</p>
@@ -514,9 +665,10 @@ const Payroll: React.FC<PayrollProps> = ({ user, onLogout, onNavigate }) => {
                   </button>
                   <button
                     onClick={handleConfirmPayroll}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition"
+                    disabled={generating}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white py-2 rounded-lg transition"
                   >
-                    Confirm & Save
+                    {generating ? 'Saving...' : 'Confirm & Save'}
                   </button>
                 </div>
               </div>

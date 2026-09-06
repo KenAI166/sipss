@@ -36,8 +36,8 @@ const fetchWithTimeout: typeof fetch = (input, init) => {
 export const supabase: SupabaseClient = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseKey, {
       auth: {
-        persistSession: false,
-        autoRefreshToken: false,
+        persistSession: true,
+        autoRefreshToken: true,
         detectSessionInUrl: false,
         lock: noOpLock,
       },

@@ -5,7 +5,7 @@ let db: Database | null = null;
 let isInitializing = false;
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
-let useLocalStorageFallback = false;
+let useLocalStorageFallback = true;
 
 // Initialize SQL.js and database
 export async function initDatabase(): Promise<void> {
@@ -42,14 +42,32 @@ function saveDatabase(): void {
 }
 
 // Initialize localStorage fallback tables
+export const LOCAL_TABLES = ['products', 'sales', 'attendance', 'staff', 'payroll', 'expenses', 'inventory', 'schedules', 'ingredients', 'recipes', 'recipe_items', 'suppliers', 'stock_transactions'];
+
 function initializeLocalStorageTables(): void {
-  const tables = ['products', 'sales', 'attendance', 'staff', 'payroll', 'expenses', 'inventory', 'schedules', 'ingredients', 'recipes', 'recipe_items', 'suppliers', 'stock_transactions'];
+  const tables = LOCAL_TABLES;
   tables.forEach(table => {
     if (!localStorage.getItem(`sipss_${table}`)) {
       localStorage.setItem(`sipss_${table}`, JSON.stringify([]));
     }
   });
 }
+
+// Ensure localStorage fallback is ready immediately (even before initDatabase is called,
+// e.g. after a hot module reload in dev).
+initializeLocalStorageTables();
+
+// One-time cleanup: earlier fallback UPDATEs with unparseable SET clauses wrote
+// stub rows containing only an id — drop any row that has no real fields.
+['sipss_products', 'sipss_sales', 'sipss_ingredients', 'sipss_payroll'].forEach(key => {
+  try {
+    const rows = JSON.parse(localStorage.getItem(key) || '[]');
+    if (Array.isArray(rows)) {
+      const cleaned = rows.filter((r: any) => r && typeof r === 'object' && Object.keys(r).length > 1);
+      if (cleaned.length !== rows.length) localStorage.setItem(key, JSON.stringify(cleaned));
+    }
+  } catch { /* ignore */ }
+});
 
 // Helper functions for localStorage fallback
 function getLocalStorageData(table: string): any[] {
@@ -65,6 +83,31 @@ function generateId(table: string): number {
   const data = getLocalStorageData(table);
   const maxId = data.reduce((max, item) => Math.max(max, item.id || 0), 0);
   return maxId + 1;
+}
+
+// Delete specific local rows by id — used to propagate remote deletes.
+// ONLY ids explicitly listed are removed; rows in `protectedIds` (offline
+// creates awaiting sync, local ids mapped to remote ids) are always kept.
+// Never call this with a computed "keep" set — pass the ids that were
+// confirmed deleted remotely (present in the previous snapshot, absent now).
+export async function deleteLocalRowsByIds(table: string, pruneIds: Set<number>, protectedIds: Set<number>): Promise<void> {
+  if (!LOCAL_TABLES.includes(table) || pruneIds.size === 0) return;
+  const targets = new Set(Array.from(pruneIds).filter(id => !protectedIds.has(id)));
+  if (targets.size === 0) return;
+  try {
+    if (useLocalStorageFallback) {
+      const rows = getLocalStorageData(table);
+      const filtered = rows.filter((r: any) => !targets.has(r.id));
+      if (filtered.length !== rows.length) setLocalStorageData(table, filtered);
+      return;
+    }
+    if (!db) return;
+    for (const id of Array.from(targets)) {
+      runExecute(`DELETE FROM ${table} WHERE id = ?`, [id]);
+    }
+  } catch (err) {
+    console.warn(`deleteLocalRowsByIds(${table}) failed:`, err);
+  }
 }
 
 // Create all tables
@@ -98,6 +141,7 @@ async function createTables(): Promise<void> {
       customer_name TEXT,
       notes TEXT,
       cashier_name TEXT,
+      deleted_at TEXT,
       created_at TEXT NOT NULL
     )`,
     `CREATE TABLE IF NOT EXISTS attendance (
@@ -249,6 +293,11 @@ async function createTables(): Promise<void> {
     } catch (error) {
       // Column likely already exists
     }
+    try {
+      db.run('ALTER TABLE sales ADD COLUMN deleted_at TEXT');
+    } catch (error) {
+      // Column likely already exists
+    }
   }
 
   saveDatabase();
@@ -266,7 +315,8 @@ function parseInsertColumns(sql: string): string[] {
 
 // Helper function to parse UPDATE column names from SQL
 function parseUpdateColumns(sql: string): string[] {
-  const match = sql.match(/SET\s+(.+?)\s+WHERE/i);
+  // [\s\S] (not .) so the SET clause can span multiple lines.
+  const match = sql.match(/SET\s+([\s\S]+?)\s+WHERE/i);
   if (!match) return [];
   return match[1].split(',').map(part => part.split('=')[0].trim().replace(/['"`]/g, ''));
 }
@@ -318,6 +368,13 @@ function runQuery(sql: string, params: any[] = []): any[] {
           const dateRangeMatch = condition.match(/date\s*>=\s*\?\s+AND\s+date\s*<=\s*\?/i);
           if (dateRangeMatch) {
             return data.filter((item: any) => item.date >= params[params.length - 2] && item.date <= params[params.length - 1]);
+          }
+          // Handle generic column = ? conditions (including alias.column = ?)
+          const genericMatch = condition.match(/(?:\w+\.)?(\w+)\s*=\s*\?/i);
+          if (genericMatch && params.length > 0) {
+            const field = genericMatch[1];
+            const value = params[params.length - 1];
+            return data.filter((item: any) => String(item[field]) === String(value));
           }
         }
       }
@@ -385,8 +442,10 @@ function runExecute(sql: string, params: any[] = []): void {
         if (idMatch && params.length > 0) {
           const id = params[params.length - 1];
           console.log('runExecute fallback UPDATE id:', id, 'params:', params, 'columns:', columns);
+          let matched = false;
           data = data.map((item: any) => {
             if (item.id === id) {
+              matched = true;
               const updates: any = { ...item };
               columns.forEach((col, index) => {
                 if (params[index] !== undefined) {
@@ -398,6 +457,18 @@ function runExecute(sql: string, params: any[] = []): void {
             }
             return item;
           });
+          // If no row matched, upsert a new row so local fallback stays in sync
+          // with remote data (e.g., when a remote record is mirrored locally).
+          if (!matched) {
+            const newItem: any = { id };
+            columns.forEach((col, index) => {
+              if (params[index] !== undefined) {
+                newItem[col] = params[index];
+              }
+            });
+            data.push(newItem);
+            console.log('runExecute fallback UPSERT new item:', newItem);
+          }
         }
       } else if (sql.toLowerCase().startsWith('delete')) {
         // Handle DELETE
@@ -474,7 +545,11 @@ export async function deleteProduct(id: number): Promise<void> {
 
 // Sales operations
 export async function getSales(): Promise<any[]> {
-  return runQuery('SELECT * FROM sales ORDER BY created_at DESC');
+  return runQuery('SELECT * FROM sales WHERE deleted_at IS NULL ORDER BY created_at DESC');
+}
+
+export async function getDeletedSales(): Promise<any[]> {
+  return runQuery('SELECT * FROM sales WHERE deleted_at IS NOT NULL ORDER BY created_at DESC');
 }
 
 export async function getSaleById(id: number): Promise<any | null> {
@@ -485,8 +560,8 @@ export async function getSaleById(id: number): Promise<any | null> {
 export async function saveSale(sale: any): Promise<any> {
   if (sale.id) {
     runExecute(
-      `UPDATE sales SET receipt_number = ?, items = ?, subtotal = ?, tax = ?, discount = ?, 
-       total = ?, payment_method = ?, customer_name = ?, notes = ?, cashier_name = ? WHERE id = ?`,
+      `UPDATE sales SET receipt_number = ?, items = ?, subtotal = ?, tax = ?, discount = ?,
+       total = ?, payment_method = ?, customer_name = ?, notes = ?, cashier_name = ?, deleted_at = ? WHERE id = ?`,
       [
         sale.receipt_number,
         sale.items,
@@ -498,14 +573,15 @@ export async function saveSale(sale: any): Promise<any> {
         sale.customer_name || '',
         sale.notes || '',
         sale.cashier_name || '',
+        sale.deleted_at || null,
         sale.id,
       ]
     );
     return sale;
   } else {
     runExecute(
-      `INSERT INTO sales (receipt_number, items, subtotal, tax, discount, total, payment_method, customer_name, notes, cashier_name, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sales (receipt_number, items, subtotal, tax, discount, total, payment_method, customer_name, notes, cashier_name, deleted_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         sale.receipt_number,
         sale.items,
@@ -517,6 +593,7 @@ export async function saveSale(sale: any): Promise<any> {
         sale.customer_name || '',
         sale.notes || '',
         sale.cashier_name || '',
+        sale.deleted_at || null,
         sale.created_at || new Date().toISOString(),
       ]
     );
@@ -526,7 +603,11 @@ export async function saveSale(sale: any): Promise<any> {
 }
 
 export async function deleteSale(id: number): Promise<void> {
-  runExecute('DELETE FROM sales WHERE id = ?', [id]);
+  runExecute('UPDATE sales SET deleted_at = ? WHERE id = ?', [new Date().toISOString(), id]);
+}
+
+export async function restoreSale(id: number): Promise<void> {
+  runExecute('UPDATE sales SET deleted_at = ? WHERE id = ?', [null, id]);
 }
 
 // Attendance operations
@@ -777,6 +858,9 @@ export async function calculatePayrollForPeriod(staffId: number, startDate: stri
     return a.staff_id === staffId && date >= startDate && date <= endDate;
   });
 
+  // Default hourly rate: ₱56/hr when the staff record has no rate set
+  const hourlyRate = staff.hourly_rate > 0 ? staff.hourly_rate : 56;
+
   let totalHours = 0;
   let totalBreakHours = 0;
   let daysPresent = 0;
@@ -788,12 +872,16 @@ export async function calculatePayrollForPeriod(staffId: number, startDate: stri
       const timeIn = new Date(`2000-01-01 ${record.time_in}`);
       const timeOut = new Date(`2000-01-01 ${record.time_out}`);
       const hours = (timeOut.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
-      totalHours += hours;
-      daysPresent++;
+      if (hours > 0) {
+        totalHours += hours;
+        daysPresent++;
 
-      // Check if late (after 9:00 AM)
-      if (timeIn.getHours() >= 9 && timeIn.getMinutes() > 0) {
-        daysLate++;
+        // Check if late (after 9:00 AM)
+        if (timeIn.getHours() >= 9 && timeIn.getMinutes() > 0) {
+          daysLate++;
+        }
+      } else {
+        daysAbsent++;
       }
     } else {
       daysAbsent++;
@@ -803,13 +891,13 @@ export async function calculatePayrollForPeriod(staffId: number, startDate: stri
       const breakStart = new Date(`2000-01-01 ${record.break_start}`);
       const breakEnd = new Date(`2000-01-01 ${record.break_end}`);
       const breakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
-      totalBreakHours += breakHours;
+      if (breakHours > 0) totalBreakHours += breakHours;
     }
   });
 
   const netHours = totalHours - totalBreakHours;
-  const grossPay = netHours * staff.hourly_rate;
-  const lateDeductions = daysLate * (staff.hourly_rate * 0.5);
+  const grossPay = netHours * hourlyRate;
+  const lateDeductions = daysLate * (hourlyRate * 0.5);
   const netPay = grossPay - lateDeductions;
 
   return {

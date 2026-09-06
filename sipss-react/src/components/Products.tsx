@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { getProducts, saveProduct, deleteProduct } from '../utils/db';
+import { getProducts, saveProduct, deleteProduct, seedSampleData, onSynced } from '../utils/db';
 
 interface Product {
   id: number;
@@ -28,7 +29,7 @@ interface ProductsProps {
 }
 
 const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -54,134 +55,16 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
+        await seedSampleData();
         const loadedProducts = await getProducts();
-        
-        // If no products exist, add sample data
-        if (loadedProducts.length === 0) {
-          const sampleProducts: Product[] = [
-            {
-              id: 0,
-              name: 'Espresso',
-              category: 'Coffee',
-              price: 85.00,
-              cost_price: 45.00,
-              stock: 50,
-              sku: 'COF-001',
-              is_active: true,
-              description: 'Rich and bold espresso shot',
-              barcode: '1234567890123',
-              color: '#8B4513',
-            },
-            {
-              id: 0,
-              name: 'Cappuccino',
-              category: 'Coffee',
-              price: 120.00,
-              cost_price: 65.00,
-              stock: 35,
-              sku: 'COF-002',
-              is_active: true,
-              description: 'Classic cappuccino with foam',
-              barcode: '1234567890124',
-              color: '#D2691E',
-            },
-            {
-              id: 0,
-              name: 'Latte',
-              category: 'Coffee',
-              price: 130.00,
-              cost_price: 70.00,
-              stock: 40,
-              sku: 'COF-003',
-              is_active: true,
-              description: 'Smooth latte with steamed milk',
-              barcode: '1234567890125',
-              color: '#F5DEB3',
-            },
-            {
-              id: 0,
-              name: 'Americano',
-              category: 'Coffee',
-              price: 95.00,
-              cost_price: 50.00,
-              stock: 45,
-              sku: 'COF-004',
-              is_active: true,
-              description: 'Hot water with espresso',
-              barcode: '1234567890126',
-              color: '#6F4E37',
-            },
-            {
-              id: 0,
-              name: 'Mocha',
-              category: 'Coffee',
-              price: 140.00,
-              cost_price: 75.00,
-              stock: 30,
-              sku: 'COF-005',
-              is_active: true,
-              description: 'Chocolate-flavored coffee',
-              barcode: '1234567890127',
-              color: '#3D2B1F',
-            },
-            {
-              id: 0,
-              name: 'Green Tea',
-              category: 'Tea',
-              price: 90.00,
-              cost_price: 40.00,
-              stock: 25,
-              sku: 'TEA-001',
-              is_active: true,
-              description: 'Fresh green tea',
-              barcode: '1234567890128',
-              color: '#90EE90',
-            },
-            {
-              id: 0,
-              name: 'Croissant',
-              category: 'Pastry',
-              price: 75.00,
-              cost_price: 35.00,
-              stock: 20,
-              sku: 'PAS-001',
-              is_active: true,
-              description: 'Buttery croissant',
-              barcode: '1234567890129',
-              color: '#FFD700',
-            },
-            {
-              id: 0,
-              name: 'Blueberry Muffin',
-              category: 'Pastry',
-              price: 80.00,
-              cost_price: 38.00,
-              stock: 15,
-              sku: 'PAS-002',
-              is_active: true,
-              description: 'Fresh blueberry muffin',
-              barcode: '1234567890130',
-              color: '#4169E1',
-            },
-          ];
-          
-          // Save each sample product to database
-          for (const product of sampleProducts) {
-            await saveProduct(product);
-          }
-          
-          // Reload products after inserting sample data
-          const updatedProducts = await getProducts();
-          setProducts(updatedProducts);
-        } else {
-          setProducts(loadedProducts);
-        }
+        setProducts(loadedProducts);
       } catch (error) {
         console.error('Error loading products:', error);
       }
     };
     
     loadProducts();
+    return onSynced(loadProducts);
   }, []);
 
   const categories = Array.from(new Set(products.map(p => p.category)));
@@ -288,7 +171,7 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
       
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
             <Header title="Products" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -425,8 +308,8 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
             </div>
 
             <form onSubmit={handleSaveProduct}>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div className="col-span-full sm:col-span-2">
                   <label className="block text-sm font-medium text-black dark:text-white mb-1">Product Name *</label>
                   <input
                     type="text"
@@ -523,7 +406,7 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                   </select>
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-full sm:col-span-2">
                   <label className="block text-sm font-medium text-black dark:text-white mb-1">Description</label>
                   <textarea
                     value={formData.description}
@@ -533,7 +416,7 @@ const Products: React.FC<ProductsProps> = ({ user, onLogout, onNavigate }) => {
                   />
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-full sm:col-span-2">
                   <label className="flex items-center space-x-2">
                     <input
                       type="checkbox"

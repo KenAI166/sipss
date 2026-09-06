@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getExpenses, saveExpense, deleteExpense } from '../utils/db';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
+import { getExpenses, saveExpense, deleteExpense, onSynced } from '../utils/db';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -22,7 +23,7 @@ interface ExpensesProps {
 }
 
 const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'success' | 'error' | 'info'>('info');
@@ -53,6 +54,7 @@ const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
 
   useEffect(() => {
     loadExpenses();
+    return onSynced(loadExpenses);
   }, []);
 
   const loadExpenses = async () => {
@@ -221,7 +223,7 @@ const Expenses: React.FC<ExpensesProps> = ({ user, onLogout, onNavigate }) => {
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="expenses" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header */}
           <div className="mb-8">
             <Header title="Expenses" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />

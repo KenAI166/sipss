@@ -18,7 +18,7 @@ export interface AuthUser {
 }
 
 // Views only the owner (CEO) may access. Managers get everything else.
-const OWNER_ONLY_VIEWS = ['payroll', 'staff'] as const;
+const OWNER_ONLY_VIEWS = ['staff'] as const;
 
 export function canAccess(role: Role, view: string): boolean {
   if (role === 'owner') return true;
@@ -29,29 +29,32 @@ export function allowedViews(role: Role): string[] {
   const all = [
     'dashboard', 'pos', 'products', 'inventory', 'ingredients', 'recipes',
     'suppliers', 'stock-transactions', 'sales', 'attendance', 'schedule',
-    'payroll', 'expenses', 'staff',
+    'payroll', 'expenses', 'staff', 'manual',
   ];
   return all.filter((v) => canAccess(role, v));
 }
 
-function roleFrom(user: User): Role | null {
-  const role = user.app_metadata?.role;
-  return role === 'owner' || role === 'manager' ? role : null;
+function roleFrom(user: User, profileRole?: string | null): Role | null {
+  // The JWT claim is authoritative; fall back to user_metadata and the
+  // profiles table so accounts created outside the seed script still work.
+  const raw = user.app_metadata?.role ?? user.user_metadata?.role ?? profileRole ?? '';
+  const role = String(raw).toLowerCase();
+  return role === 'owner' || role === 'manager' ? (role as Role) : null;
 }
 
 async function toAuthUser(user: User): Promise<AuthUser> {
-  const role = roleFrom(user);
+  // Mirror display info from public.profiles when available.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, full_name, is_active, role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const role = roleFrom(user, profile?.role);
   if (!role) {
     await supabase.auth.signOut();
     throw new Error('This account has no assigned role. Contact the administrator.');
   }
-
-  // Mirror display info from public.profiles when available.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, full_name, is_active')
-    .eq('id', user.id)
-    .maybeSingle();
 
   if (profile && profile.is_active === false) {
     await supabase.auth.signOut();
@@ -114,5 +117,18 @@ export function onAuthChange(callback: (user: AuthUser | null) => void) {
 
 export async function signOut(): Promise<void> {
   if (!isSupabaseConfigured) return;
-  await supabase.auth.signOut();
+
+  // Try to revoke the session server-side, but don't let a hanging network
+  // request break logout. Fall back to a local-only sign-out so the browser
+  // session is always cleared immediately.
+  try {
+    await Promise.race([
+      supabase.auth.signOut({ scope: 'global' }),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('signOut timed out')), 3000)
+      ),
+    ]);
+  } catch {
+    await supabase.auth.signOut({ scope: 'local' });
+  }
 }

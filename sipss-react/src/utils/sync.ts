@@ -19,7 +19,8 @@ export interface PendingOp {
 export function isNetworkError(err: any): boolean {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   const msg = String(err?.message || err || '').toLowerCase();
-  return /failed to fetch|network ?error|network request failed|load failed|fetch failed|err_internet_disconnected|err_network/.test(msg);
+  return err?.name === 'TimeoutError' || err?.name === 'AbortError' ||
+    /failed to fetch|network ?error|network request failed|load failed|fetch failed|timed? ?out|err_internet_disconnected|err_network|aborterror/.test(msg);
 }
 
 function readQueue(): PendingOp[] {
@@ -43,6 +44,22 @@ export function enqueue(op: Omit<PendingOp, 'createdAt'>): void {
 
 export function pendingCount(): number {
   return readQueue().length;
+}
+
+// Local row ids that must never be pruned by a remote sync: rows created
+// offline awaiting replay, and local ids that were already synced under a
+// different remote id (kept so the local mirror stays consistent).
+export function protectedLocalIds(): Set<number> {
+  const ids = new Set<number>();
+  for (const op of readQueue()) {
+    if (op.localId != null) ids.add(op.localId);
+  }
+  const idMap = readIdMap();
+  for (const k of Object.keys(idMap)) {
+    const n = Number(k);
+    if (!isNaN(n)) ids.add(n);
+  }
+  return ids;
 }
 
 // --- snapshot cache ---------------------------------------------------------

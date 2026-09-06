@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -36,7 +37,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [todaySales, setTodaySales] = useState(0);
   const [todayProductsSold, setTodayProductsSold] = useState(0);
   const [todayExpenses, setTodayExpenses] = useState(0);
@@ -323,7 +324,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
         {/* Header with Menu Button */}
         <Header title="Dashboard" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((stat, index) => (
@@ -380,7 +381,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
           {/* Quick Actions */}
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-black mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {quickActions.map((action, index) => (
                 <button
                   key={index}
@@ -400,7 +401,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-black mb-4">Recent Sales</h2>
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
@@ -426,6 +428,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -434,7 +437,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
             <div className="mb-8">
               <h2 className="text-lg font-semibold text-black mb-4">Low Stock Alert ({lowStockCount} items)</h2>
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <table className="w-full">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
@@ -454,6 +458,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => 
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}

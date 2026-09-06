@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { AuthUser } from '../utils/auth';
@@ -11,6 +12,7 @@ import {
   getExpenses,
   getStockTransactions,
   getPayroll,
+  onSynced,
 } from '../utils/db';
 import {
   BarChart3,
@@ -33,7 +35,7 @@ interface AnalyticsProps {
 }
 
 const Analytics: React.FC<AnalyticsProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [sales, setSales] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -72,7 +74,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, onLogout, onNavigate }) => 
       }
     };
     load();
-    return () => { mounted = false; };
+    const offSync = onSynced(load);
+    return () => { mounted = false; offSync(); };
   }, []);
 
   const formatCurrency = (value: number) =>
@@ -254,7 +257,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, onLogout, onNavigate }) => 
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
         <Header title="Analytics" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-800">

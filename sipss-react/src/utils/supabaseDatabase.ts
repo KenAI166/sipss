@@ -27,6 +27,16 @@ export async function saveAttendance(attendance: any): Promise<any> {
   console.log('supabase saveAttendance input:', attendance, 'payload start:', payload);
   if (!payload.created_at) payload.created_at = new Date().toISOString();
 
+  // Fast path: single round-trip via the upsert_attendance Postgres function.
+  try {
+    const { data, error } = await supabase.rpc('upsert_attendance', { p_record: payload });
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    if (!isMissingFunction(err)) throw err;
+    // Function not deployed yet — use the legacy find-then-write path below.
+  }
+
   // If id is missing, try to find an existing attendance record for this staff/date
   // so updates don't silently fail or create duplicates.
   if (!payload.id && payload.staff_id && payload.date) {
@@ -155,6 +165,14 @@ function requireConfigured() {
   if (!isSupabaseConfigured) throw new Error('Supabase is not configured');
 }
 
+// True when the RPC hasn't been deployed to the database yet — callers fall
+// back to the multi-request implementation so the app keeps syncing before
+// the new functions from supabase-schema.sql are applied.
+function isMissingFunction(err: any): boolean {
+  const msg = String(err?.message || '').toLowerCase();
+  return err?.code === 'PGRST202' || msg.includes('could not find') || msg.includes('does not exist');
+}
+
 async function listRows(table: string, orderBy: string, ascending = false): Promise<any[]> {
   requireConfigured();
   const { data, error } = await supabase.from(table).select('*').order(orderBy, { ascending });
@@ -235,7 +253,25 @@ export async function deleteProduct(id: number): Promise<void> {
 
 // Sales operations
 export async function getSales(): Promise<any[]> {
-  return listRows('sales', 'created_at');
+  requireConfigured();
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getDeletedSales(): Promise<any[]> {
+  requireConfigured();
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .not('deleted_at', 'is', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
 }
 
 export async function getSaleById(id: number): Promise<any | null> {
@@ -248,8 +284,36 @@ export async function saveSale(sale: any): Promise<any> {
   return saveRow('sales', payload);
 }
 
+// One-round-trip checkout: the process_sale Postgres function inserts the
+// sale, deducts all recipe ingredient stock, logs stock transactions, and
+// decrements product stock atomically. Replaces dozens of sequential
+// PostgREST calls. See supabase-schema.sql for the function definition.
+export async function processSale(
+  sale: any,
+  items: { product_id: number; quantity: number }[]
+): Promise<{ sale_id: number; receipt_number: string }> {
+  requireConfigured();
+  const { data, error } = await supabase.rpc('process_sale', {
+    p_sale: sale,
+    p_items: items,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteSale(id: number): Promise<void> {
-  return deleteRow('sales', id);
+  requireConfigured();
+  const { error } = await supabase
+    .from('sales')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function restoreSale(id: number): Promise<void> {
+  requireConfigured();
+  const { error } = await supabase.from('sales').update({ deleted_at: null }).eq('id', id);
+  if (error) throw error;
 }
 
 // Payroll operations
@@ -310,6 +374,9 @@ export async function calculatePayrollForPeriod(staffId: number, startDate: stri
     return a.staff_id === staffId && date >= startDate && date <= endDate;
   });
 
+  // Default hourly rate: ₱56/hr when the staff record has no rate set
+  const hourlyRate = staff.hourly_rate > 0 ? staff.hourly_rate : 56;
+
   let totalHours = 0;
   let totalBreakHours = 0;
   let daysPresent = 0;
@@ -320,22 +387,28 @@ export async function calculatePayrollForPeriod(staffId: number, startDate: stri
     if (record.time_in && record.time_out) {
       const timeIn = new Date(`2000-01-01 ${record.time_in}`);
       const timeOut = new Date(`2000-01-01 ${record.time_out}`);
-      totalHours += (timeOut.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
-      daysPresent++;
-      if (timeIn.getHours() >= 9 && timeIn.getMinutes() > 0) daysLate++;
+      const hours = (timeOut.getTime() - timeIn.getTime()) / (1000 * 60 * 60);
+      if (hours > 0) {
+        totalHours += hours;
+        daysPresent++;
+        if (timeIn.getHours() >= 9 && timeIn.getMinutes() > 0) daysLate++;
+      } else {
+        daysAbsent++;
+      }
     } else {
       daysAbsent++;
     }
     if (record.break_start && record.break_end) {
       const breakStart = new Date(`2000-01-01 ${record.break_start}`);
       const breakEnd = new Date(`2000-01-01 ${record.break_end}`);
-      totalBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+      const breakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+      if (breakHours > 0) totalBreakHours += breakHours;
     }
   });
 
   const netHours = totalHours - totalBreakHours;
-  const grossPay = netHours * staff.hourly_rate;
-  const lateDeductions = daysLate * (staff.hourly_rate * 0.5);
+  const grossPay = netHours * hourlyRate;
+  const lateDeductions = daysLate * (hourlyRate * 0.5);
 
   return {
     staff_id: staffId,
@@ -485,7 +558,35 @@ export async function getRecipeItems(recipeId: number): Promise<any[]> {
     .from('recipe_items')
     .select('*, ingredients(name, unit, current_quantity)')
     .eq('recipe_id', recipeId);
-  if (error) throw error;
+  if (error) {
+    // The ingredients(...) embed needs a foreign key on recipe_items.ingredient_id.
+    // If it is missing, fall back to a manual join so recipes still load.
+    const { data: items, error: itemsError } = await supabase
+      .from('recipe_items')
+      .select('*')
+      .eq('recipe_id', recipeId);
+    if (itemsError) throw itemsError;
+    const ingredientIds = Array.from(new Set((items || []).map((i: any) => i.ingredient_id).filter((x: any) => x != null)));
+    let ingredientMap: Record<string, any> = {};
+    if (ingredientIds.length > 0) {
+      const { data: ings } = await supabase
+        .from('ingredients')
+        .select('id, name, unit, current_quantity')
+        .in('id', ingredientIds);
+      (ings || []).forEach((ing: any) => { ingredientMap[ing.id] = ing; });
+    }
+    return (items || [])
+      .map((item: any) => {
+        const ing = ingredientMap[item.ingredient_id];
+        return {
+          ...item,
+          ingredient_name: ing?.name ?? item.ingredient_name,
+          ingredient_unit: ing?.unit ?? item.ingredient_unit,
+          current_quantity: ing?.current_quantity ?? item.current_quantity,
+        };
+      })
+      .sort((a: any, b: any) => String(a.ingredient_name).localeCompare(String(b.ingredient_name)));
+  }
   return (data || [])
     .map((item: any) => ({
       ...item,
@@ -509,9 +610,12 @@ export async function saveRecipeItem(recipeItem: any): Promise<any> {
 
 export async function deleteRecipe(id: number): Promise<void> {
   requireConfigured();
-  const { error: itemsError } = await supabase.from('recipe_items').delete().eq('recipe_id', id);
+  // Both deletes are independent — run them in one parallel round-trip.
+  const [{ error: itemsError }, { error }] = await Promise.all([
+    supabase.from('recipe_items').delete().eq('recipe_id', id),
+    supabase.from('recipes').delete().eq('id', id),
+  ]);
   if (itemsError) throw itemsError;
-  const { error } = await supabase.from('recipes').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -553,6 +657,24 @@ export async function adjustIngredientStock(
   reason: string,
   createdBy: string
 ): Promise<void> {
+  // Fast path: single round-trip via the adjust_stock Postgres function.
+  try {
+    const { error } = await supabase.rpc('adjust_stock', {
+      p_ingredient_id: ingredientId,
+      p_quantity_change: quantityChange,
+      p_transaction_type: transactionType,
+      p_reference_id: referenceId,
+      p_reference_type: referenceType,
+      p_reason: reason,
+      p_created_by: createdBy,
+    });
+    if (error) throw error;
+    return;
+  } catch (err) {
+    if (!isMissingFunction(err)) throw err;
+    // Function not deployed yet — use the legacy multi-request path below.
+  }
+
   const ingredient = await getIngredientById(ingredientId);
   if (!ingredient) throw new Error('Ingredient not found');
 
@@ -597,38 +719,61 @@ export async function deductStockForSale(
 
     const yieldQuantity = recipe.yield_quantity || 1;
     const multiplier = quantity / yieldQuantity;
-    let totalCost = 0;
-    const deductions: string[] = [];
 
-    for (const item of recipeItems) {
-      const ingredient = await getIngredientById(item.ingredient_id);
+    // Fetch every ingredient in parallel — sequential round-trips made
+    // checkout painfully slow for recipes with several ingredients.
+    const ingredients = await Promise.all(
+      recipeItems.map((item) => getIngredientById(item.ingredient_id))
+    );
+
+    // Validate the whole recipe BEFORE writing anything — previously the loop
+    // deducted earlier ingredients and then threw on an insufficient one,
+    // leaving stock partially deducted.
+    interface PendingDeduction {
+      ingredient: any;
+      item: any;
+      deductAmount: number;
+      newQuantity: number;
+    }
+    const pending: PendingDeduction[] = [];
+    for (let i = 0; i < recipeItems.length; i++) {
+      const item = recipeItems[i];
+      const ingredient = ingredients[i];
       if (!ingredient) continue;
-
       const deductAmount = item.quantity * multiplier;
       const newQuantity = ingredient.current_quantity - deductAmount;
       if (newQuantity < 0) {
         throw new Error(`Insufficient stock for ${ingredient.name}: need ${deductAmount} ${ingredient.unit}, have ${ingredient.current_quantity}`);
       }
-
-      await saveIngredient({ ...ingredient, current_quantity: newQuantity });
-      totalCost += deductAmount * (ingredient.cost_per_unit || 0);
-      deductions.push(`${ingredient.name}: -${deductAmount.toFixed(2)} ${ingredient.unit}`);
-
-      await saveStockTransaction({
-        ingredient_id: ingredient.id,
-        ingredient_name: ingredient.name,
-        transaction_type: 'sale',
-        quantity: -deductAmount,
-        quantity_before: ingredient.current_quantity,
-        quantity_after: newQuantity,
-        reference_id: referenceId,
-        reference_type: 'sale',
-        reason: `Sold ${quantity} x ${recipe.product_name}`,
-        cost_per_unit: ingredient.cost_per_unit || 0,
-        total_cost: deductAmount * (ingredient.cost_per_unit || 0),
-        created_by: createdBy,
-      });
+      pending.push({ ingredient, item, deductAmount, newQuantity });
     }
+
+    // Apply all updates and log all transactions in parallel.
+    let totalCost = 0;
+    const deductions: string[] = [];
+    await Promise.all(
+      pending.flatMap(({ ingredient, deductAmount, newQuantity }) => {
+        totalCost += deductAmount * (ingredient.cost_per_unit || 0);
+        deductions.push(`${ingredient.name}: -${deductAmount.toFixed(2)} ${ingredient.unit}`);
+        return [
+          saveIngredient({ ...ingredient, current_quantity: newQuantity }),
+          saveStockTransaction({
+            ingredient_id: ingredient.id,
+            ingredient_name: ingredient.name,
+            transaction_type: 'sale',
+            quantity: -deductAmount,
+            quantity_before: ingredient.current_quantity,
+            quantity_after: newQuantity,
+            reference_id: referenceId,
+            reference_type: 'sale',
+            reason: `Sold ${quantity} x ${recipe.product_name}`,
+            cost_per_unit: ingredient.cost_per_unit || 0,
+            total_cost: deductAmount * (ingredient.cost_per_unit || 0),
+            created_by: createdBy,
+          }),
+        ];
+      })
+    );
 
     return { success: true, message: `Stock deducted: ${deductions.join(', ')}`, cost: totalCost };
   } catch (error: any) {

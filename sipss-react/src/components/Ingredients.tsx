@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { getIngredients, saveIngredient, deleteIngredient, getSuppliers } from '../utils/db';
+import { getIngredients, saveIngredient, deleteIngredient, getSuppliers, onSynced } from '../utils/db';
 
 interface Ingredient {
   id: number;
@@ -32,7 +33,7 @@ interface IngredientsProps {
 }
 
 const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -51,8 +52,9 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
   });
 
   useEffect(() => {
-    loadIngredients();
-    loadSuppliers();
+    const reload = () => { loadIngredients(); loadSuppliers(); };
+    reload();
+    return onSynced(reload);
   }, []);
 
   const loadIngredients = async () => {
@@ -162,7 +164,7 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="ingredients" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
             <Header title="Ingredients" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -257,8 +259,8 @@ const Ingredients: React.FC<IngredientsProps> = ({ user, onLogout, onNavigate })
             </div>
 
             <form onSubmit={handleSave}>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div className="col-span-full sm:col-span-2">
                   <label className="block text-sm font-medium text-black dark:text-white mb-1">Name *</label>
                   <input
                     type="text"

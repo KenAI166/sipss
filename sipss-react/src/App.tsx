@@ -17,10 +17,11 @@ import Expenses from './components/Expenses';
 import Schedule from './components/Schedule';
 import Sales from './components/Sales';
 import Analytics from './components/Analytics';
-import { initDatabase } from './utils/db';
+import Manual from './components/Manual';
+import { initDatabase, seedSampleData } from './utils/db';
 import { signIn, signOut, getSessionUser, onAuthChange, canAccess, AuthUser } from './utils/auth';
 
-type View = 'home' | 'login' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff' | 'analytics';
+type View = 'home' | 'login' | 'dashboard' | 'pos' | 'attendance' | 'products' | 'sales' | 'inventory' | 'ingredients' | 'recipes' | 'suppliers' | 'stock-transactions' | 'payroll' | 'expenses' | 'schedule' | 'staff' | 'analytics' | 'manual';
 
 function App() {
   const [view, setView] = useState<View>('home');
@@ -36,6 +37,7 @@ function App() {
           setTimeout(() => reject(new Error('Database initialization timed out')), 3000)
         );
         await Promise.race([initDatabase(), dbTimeout]);
+        await seedSampleData();
       } catch (error) {
         console.error('Failed to initialize database:', error);
       } finally {
@@ -73,10 +75,23 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
+  const handleLogout = () => {
+    // Always clear local state first so the logout button can't appear
+    // unresponsive if the remote sign-out call fails or hangs.
     setUser(null);
     setView('home');
+
+    // Fire the remote sign-out in the background with a hard timeout so a
+    // hanging network request never blocks the UI.
+    const signOutWithTimeout = Promise.race([
+      signOut(),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('signOut timed out')), 5000)
+      ),
+    ]);
+
+    signOutWithTimeout
+      .catch((err) => console.warn('signOut failed or timed out, local session already cleared:', err));
   };
 
   const handleNavigate = (viewName: string) => {
@@ -138,6 +153,8 @@ function App() {
         return guard((u) => <Staff user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'staff');
       case 'analytics':
         return guard((u) => <Analytics user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'analytics');
+      case 'manual':
+        return guard((u) => <Manual user={u} onLogout={handleLogout} onNavigate={handleNavigate} />, 'manual');
       default:
         return <Home onNavigate={handleNavigate} onLogin={handleLogin} />;
     }

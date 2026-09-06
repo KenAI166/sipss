@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getSchedules, saveSchedule, deleteSchedule, getStaff } from '../utils/db';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
+import { getSchedules, saveSchedule, deleteSchedule, getStaff, onSynced } from '../utils/db';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -33,7 +34,7 @@ interface ScheduleProps {
 }
 
 const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -57,6 +58,11 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
     loadSchedules();
     loadStaff();
   }, [selectedDate]);
+
+  useEffect(() => {
+    const reload = () => { loadSchedules(); loadStaff(); };
+    return onSynced(reload);
+  }, []);
 
   const loadSchedules = async () => {
     try {
@@ -214,7 +220,7 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="schedule" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header */}
           <div className="mb-8">
             <Header title="Schedule" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
@@ -325,7 +331,7 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
           /* Calendar View */
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Weekly Overview</h3>
-            <div className="grid grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4">
               {weekDates.map((date) => {
                 const daySchedules = schedules.filter(s => s.date === date);
                 const dateObj = new Date(date);
@@ -414,7 +420,7 @@ const Schedule: React.FC<ScheduleProps> = ({ user, onLogout, onNavigate }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-black dark:text-white mb-2">Shift Start *</label>
                   <input

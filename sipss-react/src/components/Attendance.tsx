@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import { Html5Qrcode } from 'html5-qrcode';
-import { getAttendance, saveAttendance, getStaff, getStaffByQRCode, getStaffById, saveStaff, initDatabase } from '../utils/db';
+import { getAttendance, saveAttendance, getStaff, getStaffByQRCode, getStaffById, saveStaff, initDatabase, onSynced } from '../utils/db';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -39,10 +40,13 @@ interface AttendanceProps {
   onNavigate: (view: string) => void;
 }
 
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
+const getTodayDateString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const attendanceRef = useRef<AttendanceRecord[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -56,11 +60,49 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
   const [qrInput, setQrInput] = useState('');
   const [showStaffName, setShowStaffName] = useState(false);
   const [staffNameDisplay, setStaffNameDisplay] = useState('');
+  const [staffActionDisplay, setStaffActionDisplay] = useState('');
+  const modalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [qrListModalVisible, setQrListModalVisible] = useState(false);
   const [selectedQRStaff, setSelectedQRStaff] = useState<Staff | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
   const html5QrCode = useRef<Html5Qrcode | null>(null);
+  // Per-code debounce + serial queue: different staff badges are processed
+  // back-to-back with no artificial wait, while the same badge can't advance
+  // two steps from one physical scan (cooldown restarts after its action
+  // finishes, so slow network saves can't double-fire).
+  const lastScanByCode = useRef<Record<string, number>>({});
+  const scanQueue = useRef<Promise<void>>(Promise.resolve());
+  const SAME_CODE_COOLDOWN = 3000;
+  // Scan-processing overlay: animated progress so staff see the scan is being
+  // saved and don't assume the app froze.
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const beginScanProgress = () => {
+    setScanBusy(true);
+    setScanProgress(5);
+    if (progressTimer.current) clearInterval(progressTimer.current);
+    progressTimer.current = setInterval(() => {
+      // Ease toward 90% while the save is in flight; jump to 100% on finish.
+      setScanProgress((p) => (p < 90 ? p + (90 - p) * 0.12 + 2 : p));
+    }, 120);
+  };
+
+  const finishScanProgress = () => {
+    if (progressTimer.current) {
+      clearInterval(progressTimer.current);
+      progressTimer.current = null;
+    }
+    setScanProgress(100);
+    setTimeout(() => {
+      setScanBusy(false);
+      setScanProgress(0);
+    }, 400);
+  };
+  const scannerStarting = useRef(false);
+  const scannerMounted = useRef(false);
   const readerId = 'qr-reader';
   const [registerFormData, setRegisterFormData] = useState({
     name: '',
@@ -71,11 +113,13 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
   });
 
   useEffect(() => {
+    scannerMounted.current = true;
     const initialize = async () => {
       await initDatabase();
       await loadAttendance();
       await loadStaff();
       await loadStaffSession();
+      if (scannerMounted.current) await startScanner();
     };
     initialize();
 
@@ -84,13 +128,25 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
     }, 1000);
 
     return () => {
+      scannerMounted.current = false;
       clearInterval(timer);
-      if (html5QrCode.current) {
-        html5QrCode.current.stop().catch(() => {}).then(() => {
-          html5QrCode.current?.clear();
-        });
+      if (modalTimer.current) clearTimeout(modalTimer.current);
+      if (progressTimer.current) clearInterval(progressTimer.current);
+      const scanner = html5QrCode.current;
+      html5QrCode.current = null;
+      if (scanner) {
+        scanner.stop().catch(() => {}).then(() => {
+          scanner.clear();
+        }).catch(() => {});
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reload attendance + staff after a manual sync from the header button.
+  useEffect(() => {
+    const reload = () => { loadAttendance(); loadStaff(); };
+    return onSynced(reload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -212,6 +268,11 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
     setModalTitle(title);
     setModalMessage(message);
     setModalVisible(true);
+    // Auto-dismiss success modals so the scanner keeps working hands-free.
+    if (modalTimer.current) clearTimeout(modalTimer.current);
+    if (type === 'success') {
+      modalTimer.current = setTimeout(() => setModalVisible(false), 3000);
+    }
   };
 
   const handleClockIn = async (staffMember: Staff) => {
@@ -424,7 +485,9 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
   const handleAction = async () => {
     if (!selectedStaff) return;
 
-    await loadAttendance();
+    beginScanProgress();
+    try {
+      await loadAttendance();
     const todayRecord = getTodayRecord(selectedStaff.id);
     console.log('handleAction todayRecord:', todayRecord);
 
@@ -442,6 +505,9 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       await handleOvertimeEnd(todayRecord);
     } else {
       showModal('info', 'Already Completed', 'You have already completed all attendance actions for today');
+    }
+    } finally {
+      finishScanProgress();
     }
   };
 
@@ -463,24 +529,32 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       const todayRecord = getTodayRecord(staffMember.id);
       console.log('handleScanCode todayRecord:', todayRecord);
 
+      let action = '';
       if (!todayRecord) {
         await handleClockIn(staffMember);
+        action = 'Clocked In';
       } else if (!todayRecord.break_start) {
         await handleBreakStart(todayRecord);
+        action = 'Break Started';
       } else if (!todayRecord.break_end) {
         await handleBreakEnd(todayRecord);
+        action = 'Break Ended';
       } else if (!todayRecord.time_out) {
         await handleClockOut(todayRecord);
+        action = 'Clocked Out';
       } else if (!todayRecord.overtime_start) {
         await handleOvertimeStart(todayRecord);
+        action = 'Overtime Started';
       } else if (!todayRecord.overtime_end) {
         await handleOvertimeEnd(todayRecord);
+        action = 'Overtime Ended';
       } else {
         showModal('info', 'Already Completed', 'You have already completed all attendance scans for today');
       }
 
       await checkTodayStatus(staffMember);
       setStaffNameDisplay(staffMember.name);
+      setStaffActionDisplay(action);
       setShowStaffName(true);
       setQrInput('');
       setTimeout(() => {
@@ -493,10 +567,34 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
   };
 
   const handleScanQR = () => {
-    handleScanCode(qrInput);
+    enqueueScan(qrInput);
+  };
+
+  // Accept a decoded code instantly if it's a different badge; the same code
+  // is ignored until SAME_CODE_COOLDOWN has elapsed since its last action
+  // COMPLETED (not started), preventing one physical scan from advancing two
+  // steps. Scans are serialized through a promise queue so rapid scans from
+  // different staff are handled one after another with zero extra delay.
+  const enqueueScan = (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    const last = lastScanByCode.current[trimmed] || 0;
+    if (Date.now() - last < SAME_CODE_COOLDOWN) return;
+    lastScanByCode.current[trimmed] = Date.now();
+    scanQueue.current = scanQueue.current.then(async () => {
+      beginScanProgress();
+      try {
+        await handleScanCode(trimmed);
+      } finally {
+        lastScanByCode.current[trimmed] = Date.now();
+        finishScanProgress();
+      }
+    }).catch(() => {});
   };
 
   const startScanner = async () => {
+    if (scannerStarting.current || html5QrCode.current) return;
+    scannerStarting.current = true;
     try {
       const cameras = await Html5Qrcode.getCameras();
       if (!cameras || cameras.length === 0) {
@@ -514,35 +612,37 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       console.log('Available cameras:', cameras.map((c) => ({ id: c.id, label: c.label })));
       console.log('Selected camera:', preferredCamera);
 
-      html5QrCode.current = new Html5Qrcode(readerId);
-      await html5QrCode.current.start(
+      const scanner = new Html5Qrcode(readerId);
+      await scanner.start(
         preferredCamera.id,
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText: string) => {
-          await stopScanner();
-          await handleScanCode(decodedText);
+        {
+          fps: 20,
+          qrbox: { width: 300, height: 300 },
+          // Use the browser's native BarcodeDetector when available — much
+          // faster detection than the JS fallback decoder.
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        } as any,
+        (decodedText: string) => {
+          enqueueScan(decodedText);
         },
         undefined
       );
+      if (!scannerMounted.current || html5QrCode.current) {
+        // Component unmounted or another scanner started while this one was initializing.
+        try { await scanner.stop(); } catch { /* not running */ }
+        try { scanner.clear(); } catch { /* ignore */ }
+        return;
+      }
+      html5QrCode.current = scanner;
       setScannerActive(true);
     } catch (error) {
       console.error('Error starting scanner:', error);
-      showModal('error', 'Error', 'Could not start camera. Please allow camera access and reload.');
-    }
-  };
-
-  const stopScanner = async () => {
-    if (html5QrCode.current) {
-      try {
-        await html5QrCode.current.stop();
-        await html5QrCode.current.clear();
-      } catch (error) {
-        console.error('Error stopping scanner:', error);
-      } finally {
-        html5QrCode.current = null;
+      if (scannerMounted.current) {
+        showModal('error', 'Error', 'Could not start camera. Please allow camera access and reload.');
       }
+    } finally {
+      scannerStarting.current = false;
     }
-    setScannerActive(false);
   };
 
   const handleRegisterStaff = async () => {
@@ -656,7 +756,7 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
       />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Header */}
           <div className="mb-8">
             <Header title="Attendance" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
@@ -690,9 +790,12 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
           {showStaffName && (
             <div className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-clock text-3xl text-white"></i>
+                <i className={`fas ${staffActionDisplay ? 'fa-check' : 'fa-clock'} text-3xl text-white`}></i>
               </div>
               <p className="text-2xl font-bold">{staffNameDisplay}</p>
+              {staffActionDisplay && (
+                <p className="mt-1 text-lg text-white/90">{staffActionDisplay} successfully</p>
+              )}
             </div>
           )}
 
@@ -712,21 +815,18 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
                   )}
                 </div>
                 <div className="space-y-4">
-                  {!scannerActive ? (
+                  {scannerActive ? (
+                    <div className="w-full flex items-center justify-center space-x-2 text-green-600 dark:text-green-400 text-sm">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <span>Camera is on — scan a QR code</span>
+                    </div>
+                  ) : (
                     <button
                       onClick={startScanner}
                       className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition flex items-center justify-center space-x-2"
                     >
                       <i className="fas fa-camera"></i>
-                      <span>Scan QR Code</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={stopScanner}
-                      className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg transition flex items-center justify-center space-x-2"
-                    >
-                      <i className="fas fa-stop"></i>
-                      <span>Stop Camera</span>
+                      <span>Enable Camera</span>
                     </button>
                   )}
                   <div className="text-center text-gray-500 dark:text-gray-400 text-sm">or</div>
@@ -1097,6 +1197,25 @@ const Attendance: React.FC<AttendanceProps> = ({ user, onLogout, onNavigate }) =
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Scan Processing Overlay — shows while a scan action is saving so
+          staff know the app is working and don't wait wondering. */}
+      {scanBusy && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-80 rounded-lg bg-white p-6 text-center shadow-lg dark:bg-gray-900">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-500 dark:border-gray-700 dark:border-t-blue-400"></div>
+            <h3 className="mb-1 font-semibold text-gray-900 dark:text-gray-100">Processing scan…</h3>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Saving attendance, please wait</p>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                className="h-2 rounded-full bg-blue-500 transition-all duration-150"
+                style={{ width: `${scanProgress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">{Math.round(scanProgress)}%</p>
           </div>
         </div>
       )}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useSidebarOpen } from '../hooks/useSidebarOpen';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { getRecipes, getRecipeItems, saveRecipe, saveRecipeItem, deleteRecipe, deleteRecipeItem, getProducts, getIngredients } from '../utils/db';
+import { getRecipes, getRecipeItems, saveRecipe, saveRecipeItem, deleteRecipe, deleteRecipeItem, getProducts, getIngredients, onSynced } from '../utils/db';
 
 interface Product {
   id: number;
@@ -41,7 +42,7 @@ interface RecipesProps {
 }
 
 const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useSidebarOpen();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -66,9 +67,9 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
   });
 
   useEffect(() => {
-    loadRecipes();
-    loadProducts();
-    loadIngredients();
+    const reload = () => { loadRecipes(); loadProducts(); loadIngredients(); };
+    reload();
+    return onSynced(reload);
   }, []);
 
   const loadRecipes = async () => {
@@ -240,7 +241,7 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
       <Sidebar user={user} onLogout={onLogout} onNavigate={onNavigate} currentView="recipes" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
             <Header title="Recipes (BOM)" onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLogout={onLogout} />
             <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -318,8 +319,8 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
             </div>
 
             <form onSubmit={handleSave}>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div className="col-span-full sm:col-span-2">
                   <label className="block text-sm font-medium text-black dark:text-white mb-1">Product *</label>
                   <select
                     value={formData.product_id}
@@ -347,7 +348,7 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Number of products this recipe makes</p>
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-full sm:col-span-2">
                   <label className="block text-sm font-medium text-black dark:text-white mb-1">Notes</label>
                   <textarea
                     value={formData.notes}
@@ -392,8 +393,8 @@ const Recipes: React.FC<RecipesProps> = ({ user, onLogout, onNavigate }) => {
             </div>
 
             <form onSubmit={handleAddItem} className="mb-6 p-4 bg-gray-50 dark:bg-gray-950 rounded-lg">
-              <div className="grid grid-cols-4 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="col-span-full sm:col-span-2">
                   <label className="block text-sm font-medium text-black dark:text-white mb-1">Ingredient</label>
                   <select
                     value={itemFormData.ingredient_id}

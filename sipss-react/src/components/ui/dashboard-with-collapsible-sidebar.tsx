@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSidebarOpen } from "../../hooks/useSidebarOpen";
 import DashboardContent from "../DashboardContent";
 import { canAccess, Role } from "../../utils/auth";
 import {
@@ -30,6 +31,7 @@ interface OptionProps {
   selected: string;
   setSelected: (view: string) => void;
   onNavigate: (view: string) => void;
+  onClose: () => void;
   open: boolean;
   notifs?: number;
 }
@@ -45,7 +47,7 @@ interface SidebarProps {
 interface NewDashboardProps {
   currentView: string;
   onNavigate: (view: string) => void;
-  onLogout?: () => void;
+  onLogout: () => void;
   role: string;
 }
 
@@ -68,10 +70,17 @@ const menuItems: { view: string; title: string; Icon: IconType; notifs?: number 
 ];
 
 export const Example: React.FC<NewDashboardProps> = ({ currentView, onNavigate, onLogout, role }) => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useSidebarOpen();
+
   return (
     <div className="flex min-h-screen w-full">
-      <div className="flex w-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+      <div className="relative flex w-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+        {open && (
+          <div
+            className="fixed inset-0 z-30 bg-black/50 transition-opacity md:hidden"
+            onClick={() => setOpen(false)}
+          />
+        )}
         <Sidebar open={open} setOpen={setOpen} currentView={currentView} onNavigate={onNavigate} role={role} />
         <ExampleContent open={open} onMenuClick={() => setOpen(!open)} onLogout={onLogout} />
       </div>
@@ -85,9 +94,11 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen, currentView, onNavigat
 
   return (
     <nav
-      className={`sticky top-0 h-screen shrink-0 border-r transition-all duration-300 ease-in-out ${
-        open ? "w-64" : "w-16"
-      } border-gray-200 bg-white p-2 shadow-sm dark:border-gray-800 dark:bg-gray-900`}
+      className={`top-0 left-0 z-40 h-screen shrink-0 border-r border-gray-200 bg-white p-2 shadow-sm transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900 ${
+        open
+          ? "fixed md:sticky w-64"
+          : "sticky w-16"
+      }`}
     >
       <TitleSection open={open} onClose={() => setOpen(false)} />
 
@@ -101,6 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen, currentView, onNavigat
             selected={selected}
             setSelected={setSelected}
             onNavigate={onNavigate}
+            onClose={() => setOpen(false)}
             open={open}
             notifs={item.notifs}
           />
@@ -119,6 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen, currentView, onNavigat
             selected={selected}
             setSelected={setSelected}
             onNavigate={onNavigate}
+            onClose={() => setOpen(false)}
             open={open}
           />
           <Option
@@ -128,6 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen, currentView, onNavigat
             selected={selected}
             setSelected={setSelected}
             onNavigate={onNavigate}
+            onClose={() => setOpen(false)}
             open={open}
           />
         </div>
@@ -143,6 +157,7 @@ const Option: React.FC<OptionProps> = ({
   selected,
   setSelected,
   onNavigate,
+  onClose,
   open,
   notifs,
 }) => {
@@ -153,25 +168,23 @@ const Option: React.FC<OptionProps> = ({
       onClick={() => {
         setSelected(view);
         onNavigate(view);
+        if (typeof window !== 'undefined' && window.innerWidth < 768 && open) {
+          onClose();
+        }
       }}
+      title={open ? undefined : title}
       className={`relative flex h-11 w-full items-center rounded-md transition-all duration-200 ${
         isSelected
           ? "border-l-2 border-blue-500 bg-blue-50 text-blue-700 shadow-sm dark:bg-blue-900/50 dark:text-blue-300"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-      }`}
+      } ${open ? '' : 'justify-center'}`}
     >
-      <div className="grid h-full w-12 place-content-center">
+      <div className={`grid h-full place-content-center ${open ? 'w-12' : 'w-full'}`}>
         <Icon className="h-4 w-4" />
       </div>
 
       {open && (
-        <span
-          className={`text-sm font-medium transition-opacity duration-200 ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {title}
-        </span>
+        <span className="truncate text-sm font-medium">{title}</span>
       )}
 
       {notifs && open && (
@@ -187,24 +200,16 @@ const TitleSection = ({ open, onClose }: { open: boolean; onClose: () => void })
   return (
     <div className="mb-6 border-b border-gray-200 pb-4 dark:border-gray-800">
       <div className="flex items-center justify-between rounded-md p-2">
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center ${open ? 'gap-3' : 'justify-center w-full'}`}>
           <Logo />
           {open && (
-            <div
-              className={`transition-opacity duration-200 ${
-                open ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div>
-                  <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    Sip Station
-                  </span>
-                  <span className="block text-xs text-gray-500 dark:text-gray-400">
-                    Cafe POS
-                  </span>
-                </div>
-              </div>
+            <div>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Sip Station
+              </span>
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                Cafe POS
+              </span>
             </div>
           )}
         </div>
@@ -229,7 +234,7 @@ const Logo = () => {
   );
 };
 
-const ExampleContent = ({ open, onMenuClick, onLogout }: { open: boolean; onMenuClick: () => void; onLogout?: () => void }) => {
+const ExampleContent = ({ open, onMenuClick, onLogout }: { open: boolean; onMenuClick: () => void; onLogout: () => void }) => {
   return <DashboardContent open={open} onMenuClick={onMenuClick} onLogout={onLogout} />;
 };
 

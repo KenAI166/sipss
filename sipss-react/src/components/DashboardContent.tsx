@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { getSales, getStaff, getAttendance, getIngredients, getProducts, getExpenses, getStockTransactions, getPayroll } from '../utils/db';
-import { DollarSign, Users, Package, ClipboardList, TrendingUp, Activity, Bell, Moon, Sun, User, Menu, LogOut } from 'lucide-react';
+import { getSales, getStaff, getAttendance, getIngredients, getInventory, getProducts, getExpenses, getStockTransactions, getPayroll, syncNow, onSynced } from '../utils/db';
+import { DollarSign, Users, Package, ClipboardList, TrendingUp, Activity, Bell, Moon, Sun, User, Menu, LogOut, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 interface DashboardContentProps {
   open: boolean;
   onMenuClick: () => void;
-  onLogout?: () => void;
+  onLogout: () => void;
 }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, onLogout }) => {
@@ -19,42 +19,60 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
   const [staff, setStaff] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [stockTransactions, setStockTransactions] = useState<any[]>([]);
   const [payroll, setPayroll] = useState<any[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+
+  const load = async () => {
+    try {
+      const [s, st, a, i, inv, p, e, stx, pr] = await Promise.all([
+        getSales(),
+        getStaff(),
+        getAttendance(),
+        getIngredients(),
+        getInventory(),
+        getProducts(),
+        getExpenses(),
+        getStockTransactions(),
+        getPayroll(),
+      ]);
+      setSales(s);
+      setStaff(st);
+      setAttendance(a);
+      setIngredients(i);
+      setInventory(inv);
+      setProducts(p);
+      setExpenses(e);
+      setStockTransactions(stx);
+      setPayroll(pr);
+    } catch (err) {
+      console.error('Dashboard data load error:', err);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        const [s, st, a, i, p, e, stx, pr] = await Promise.all([
-          getSales(),
-          getStaff(),
-          getAttendance(),
-          getIngredients(),
-          getProducts(),
-          getExpenses(),
-          getStockTransactions(),
-          getPayroll(),
-        ]);
-        if (mounted) {
-          setSales(s);
-          setStaff(st);
-          setAttendance(a);
-          setIngredients(i);
-          setProducts(p);
-          setExpenses(e);
-          setStockTransactions(stx);
-          setPayroll(pr);
-        }
-      } catch (err) {
-        console.error('Dashboard data load error:', err);
-      }
-    };
     load();
-    return () => { mounted = false; };
+    return onSynced(load);
   }, []);
+
+  const handleSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncMessage('');
+    try {
+      const result = await syncNow();
+      setSyncMessage(result.message);
+    } catch {
+      setSyncMessage('Sync failed. Please try again.');
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMessage(''), 4000);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -75,6 +93,10 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
   const isToday = (d?: string) => d && d.startsWith(today);
   const isYesterday = (d?: string) => d && d.startsWith(yesterday);
 
+  const nowLocal = new Date();
+  const todayLocal = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
+  const isTodayLocal = (d?: string) => d && d.startsWith(todayLocal);
+
   const todaySales = sales.filter(s => isToday(s.created_at)).reduce((sum, s) => sum + (s.total || 0), 0);
   const yesterdaySales = sales.filter(s => isYesterday(s.created_at)).reduce((sum, s) => sum + (s.total || 0), 0);
   const salesChange = yesterdaySales ? Math.round(((todaySales - yesterdaySales) / yesterdaySales) * 100) : 0;
@@ -83,13 +105,32 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
   const yesterdayOrders = sales.filter(s => isYesterday(s.created_at)).length;
   const ordersChange = yesterdayOrders ? Math.round(((todayOrders - yesterdayOrders) / yesterdayOrders) * 100) : 0;
 
-  const staffPresent = attendance.filter(a => isToday(a.date) && a.time_in && !a.time_out).length;
-  const staffOnBreak = attendance.filter(a => isToday(a.date) && a.break_start && !a.break_end).length;
+  const staffPresent = attendance.filter(a => isTodayLocal(a.date) && a.time_in && !a.time_out).length;
+  const staffOnBreak = attendance.filter(a => isTodayLocal(a.date) && a.break_start && !a.break_end).length;
   const totalStaff = staff.length;
   const staffOnDutyPct = totalStaff ? Math.round((staffPresent / totalStaff) * 100) : 0;
 
-  const lowStock = ingredients.filter(i => i.current_quantity <= i.minimum_quantity).length;
-  const inventoryLevel = ingredients.length ? Math.round(((ingredients.length - lowStock) / ingredients.length) * 100) : 0;
+  const staffPositionCounts: { [key: string]: number } = {};
+  staff.forEach(member => {
+    const position = member?.position?.trim() || 'Unknown';
+    staffPositionCounts[position] = (staffPositionCounts[position] || 0) + 1;
+  });
+  const staffPositionBreakdown = Object.entries(staffPositionCounts)
+    .map(([position, count]) => `${count} ${position}`)
+    .join(', ');
+
+  const combinedInventory = [
+    ...inventory.map(item => ({ ...item, source: 'inventory' as const, displayName: item.product_name || 'Unnamed' })),
+    ...ingredients.map(ing => ({ ...ing, source: 'ingredient' as const, displayName: ing.name || 'Unnamed' })),
+  ];
+  const lowStockItems = combinedInventory.filter(item => Number(item.current_quantity) <= Number(item.minimum_quantity));
+  const lowStock = lowStockItems.length;
+  const totalInventory = combinedInventory.length;
+  const inventoryLevel = totalInventory ? Math.round(((totalInventory - lowStock) / totalInventory) * 100) : 0;
+  const lowStockNames = lowStockItems
+    .slice(0, 3)
+    .map(i => i.displayName)
+    .join(', ') + (lowStockItems.length > 3 ? '...' : '');
 
   const todayExpenses = expenses.filter(e => e.date === today).reduce((sum, e) => sum + (e.amount || 0), 0);
   const expenseRatio = todaySales ? Math.round((todayExpenses / todaySales) * 100) : 0;
@@ -185,6 +226,15 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
     ...lowStockAlerts,
   ];
 
+  const [activityPage, setActivityPage] = useState(0);
+  const ACTIVITIES_PER_PAGE = 10;
+  const activityPageCount = Math.max(1, Math.ceil(activities.length / ACTIVITIES_PER_PAGE));
+  const currentActivityPage = Math.min(activityPage, activityPageCount - 1);
+  const pagedActivities = activities.slice(
+    currentActivityPage * ACTIVITIES_PER_PAGE,
+    currentActivityPage * ACTIVITIES_PER_PAGE + ACTIVITIES_PER_PAGE
+  );
+
   const productCounts: { [key: string]: number } = {};
   sales.forEach(s => {
     try {
@@ -206,10 +256,10 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
   const getTrendIcon = (change: number) => change >= 0 ? '+' : '';
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 p-6 dark:bg-gray-950">
+    <div className="flex-1 overflow-auto bg-gray-50 p-4 sm:p-6 dark:bg-gray-950">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {!open && (
             <button
               onClick={onMenuClick}
@@ -219,11 +269,26 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
             </button>
           )}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
-            <p className="mt-1 text-gray-600 dark:text-gray-400">Welcome back to Sip Station</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Dashboard</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 sm:text-base">Welcome back to Sip Station</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="relative flex items-center">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              title="Sync data with the cloud"
+              className="grid size-10 place-content-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:text-gray-900 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            >
+              <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
+            </button>
+            {syncMessage && (
+              <div className="absolute right-0 top-12 z-50 w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-lg dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                {syncMessage}
+              </div>
+            )}
+          </div>
           <button className="relative rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition-colors hover:text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
             <Bell className="h-5 w-5" />
             <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500" />
@@ -278,9 +343,16 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
             </div>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </div>
-          <h3 className="mb-1 font-medium text-gray-600 dark:text-gray-400">Staff Present</h3>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{staffPresent}</p>
-          <p className="mt-1 text-sm text-green-600 dark:text-green-400">{staffOnBreak} on break</p>
+          <h3 className="mb-1 font-medium text-gray-600 dark:text-gray-400">Staff</h3>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalStaff}</p>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            {staffPresent} present{staffOnBreak > 0 ? ` · ${staffOnBreak} on break` : ''}
+          </p>
+          {staffPositionBreakdown && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate" title={staffPositionBreakdown}>
+              {staffPositionBreakdown}
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
@@ -306,7 +378,14 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
           </div>
           <h3 className="mb-1 font-medium text-gray-600 dark:text-gray-400">Low Stock Items</h3>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{lowStock}</p>
-          <p className="mt-1 text-sm text-green-600 dark:text-green-400">Need restock</p>
+          <p className="mt-1 text-sm text-orange-600 dark:text-orange-400">
+            {lowStock === 0 ? 'All stocked' : `${lowStock} of ${totalInventory} items need restock`}
+          </p>
+          {lowStock > 0 && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate" title={lowStockItems.map((i: any) => i.displayName).join(', ')}>
+              {lowStockNames}
+            </p>
+          )}
         </div>
       </div>
 
@@ -317,13 +396,33 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div className="mb-6 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Activity</h3>
-              <button className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">View all</button>
+              {activityPageCount > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActivityPage(p => Math.max(0, p - 1))}
+                    disabled={currentActivityPage === 0}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {currentActivityPage + 1} / {activityPageCount}
+                  </span>
+                  <button
+                    onClick={() => setActivityPage(p => Math.min(activityPageCount - 1, p + 1))}
+                    disabled={currentActivityPage === activityPageCount - 1}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
             {activities.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
             ) : (
-              <div className="space-y-4">
-                {activities.map((activity, i) => (
+              <div className="h-[560px] space-y-4 overflow-y-auto pr-1">
+                {pagedActivities.map((activity, i) => (
                   <div key={i} className="flex cursor-pointer items-center space-x-4 rounded-lg p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
                     <div className={`rounded-lg p-2 ${getActivityColor(activity.color)}`}>
                       <activity.icon className={`h-4 w-4 ${getActivityTextColor(activity.color)}`} />
@@ -388,13 +487,13 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ open, onMenuClick, 
       </div>
 
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg dark:bg-gray-900">
             <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Logout</h3>
             <p className="mb-6 text-gray-600 dark:text-gray-400">Are you sure you want to log out?</p>
             <div className="flex gap-3">
               <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">No</button>
-              <button onClick={() => { setShowLogoutConfirm(false); if (onLogout) onLogout(); }} className="flex-1 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Yes</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} className="flex-1 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Yes</button>
             </div>
           </div>
         </div>
