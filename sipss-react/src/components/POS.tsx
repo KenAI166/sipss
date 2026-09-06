@@ -48,6 +48,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const showModal = (type: 'success' | 'error' | 'info', title: string, message: string) => {
     setModalType(type);
@@ -175,6 +176,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
       setProducts(updatedProducts);
 
       setReceipt({ ...sale, items });
+      setCartOpen(false);
       setCart([]);
       setDiscountType('none');
       setCustomDiscount(0);
@@ -235,7 +237,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
             {filteredProducts.map(product => (
               <div
                 key={product.id}
@@ -272,10 +274,25 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
         </div>
       </div>
 
-      {/* Cart Section */}
-        <div className="w-full md:w-96 bg-white dark:bg-gray-900 border-t md:border-t-0 md:border-l flex flex-col">
-        <div className="p-4 border-b">
+      {/* Cart Section - slide-up drawer on phones, side column on md+ */}
+        {cartOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+            onClick={() => setCartOpen(false)}
+          ></div>
+        )}
+        <div className={`${
+          cartOpen ? 'translate-y-0' : 'translate-y-full'
+        } fixed bottom-0 left-16 right-0 z-[60] flex max-h-[85vh] transform flex-col rounded-t-2xl border-t bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 md:static md:z-auto md:max-h-none md:w-80 md:shrink-0 md:translate-y-0 md:transform-none md:rounded-none md:border-l md:border-t-0 md:shadow-none md:transition-none lg:w-[26rem]`}>
+        <div className="p-4 border-b flex items-center justify-between">
           <h2 className="text-lg font-bold text-black dark:text-white">Current Order</h2>
+          <button
+            onClick={() => setCartOpen(false)}
+            className="md:hidden w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-800 text-black dark:text-white"
+            aria-label="Close cart"
+          >
+            <i className="fas fa-times"></i>
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
@@ -287,12 +304,12 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
           ) : (
             <div className="space-y-3">
               {cart.map((item) => (
-                <div key={item.product.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-950 p-3 rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-black dark:text-white text-sm">{item.product.name}</h4>
+                <div key={item.product.id} className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-950 p-3 rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-black dark:text-white text-sm break-words">{item.product.name}</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400">₱{item.product.price.toFixed(2)}</p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex shrink-0 items-center space-x-2">
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                       className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded flex items-center justify-center hover:bg-gray-300"
@@ -309,7 +326,7 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
                   </div>
                   <button
                     onClick={() => removeFromCart(item.product.id)}
-                    className="text-red-500 hover:text-red-700"
+                    className="shrink-0 text-red-500 hover:text-red-700"
                   >
                     <i className="fas fa-trash"></i>
                   </button>
@@ -438,6 +455,20 @@ const POS: React.FC<POSProps> = ({ user, onLogout, onNavigate }) => {
         </div>
       </div>
     </div>
+
+      {/* Floating cart button - phones only */}
+      <button
+        onClick={() => setCartOpen(true)}
+        className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-blue-500 px-5 py-3 font-bold text-white shadow-lg transition hover:bg-blue-600 md:hidden"
+      >
+        <i className="fas fa-shopping-cart"></i>
+        <span>View Order</span>
+        {cart.length > 0 && (
+          <span className="ml-1 rounded-full bg-white px-2 py-0.5 text-sm text-blue-600">
+            {cart.reduce((sum, item) => sum + item.quantity, 0)} · ₱{total.toFixed(2)}
+          </span>
+        )}
+      </button>
 
       {receipt && <Receipt receipt={receipt} onClose={() => setReceipt(null)} />}
 

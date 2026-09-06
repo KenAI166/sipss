@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coffee, X, Loader2 } from 'lucide-react';
+import { Coffee, X, Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
   // Returns an error message to display, or null on success.
@@ -11,6 +11,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin, embedded = false, onClose }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -78,16 +79,26 @@ const Login: React.FC<LoginProps> = ({ onLogin, embedded = false, onClose }) => 
 
           <div className="mb-6">
             <label className="block text-black text-sm font-medium mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-              placeholder="Enter your password"
-              required
-              autoComplete="current-password"
-              disabled={loading}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <button

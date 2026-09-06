@@ -117,14 +117,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="mb-6">
                 <label class="block text-black text-sm font-medium mb-2" for="password">Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Enter your password"
-                    required
-                >
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="Enter your password"
+                        required
+                    >
+                    <button 
+                        type="button" 
+                        onclick="togglePassword('password', this)" 
+                        class="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-gray-700"
+                        aria-label="Toggle password visibility"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             
             <button 
@@ -196,26 +206,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="mb-3">
                 <label class="block text-black text-sm font-medium mb-1" for="password">Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    placeholder="Create a password (min 6 characters)"
-                    required
-                >
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        placeholder="Create a password (min 6 characters)"
+                        required
+                    >
+                    <button 
+                        type="button" 
+                        onclick="togglePassword('password', this)" 
+                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700"
+                        aria-label="Toggle password visibility"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             
             <div class="mb-6">
                 <label class="block text-black text-sm font-medium mb-1" for="confirm_password">Confirm Password</label>
-                <input 
-                    type="password" 
-                    id="confirm_password" 
-                    name="confirm_password" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    placeholder="Confirm your password"
-                    required
-                >
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        placeholder="Confirm your password"
+                        required
+                    >
+                    <button 
+                        type="button" 
+                        onclick="togglePassword('confirm_password', this)" 
+                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700"
+                        aria-label="Toggle password visibility"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             
             <button 
@@ -232,5 +262,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <?php endif; ?>
     </div>
+    <script>
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !show);
+            icon.classList.toggle('fa-eye-slash', show);
+        }
+    </script>
 </body>
 </html>

@@ -18,6 +18,7 @@ import Schedule from './components/Schedule';
 import Sales from './components/Sales';
 import Analytics from './components/Analytics';
 import Manual from './components/Manual';
+import InstallAppButton from './components/InstallAppButton';
 import { initDatabase, seedSampleData } from './utils/db';
 import { signIn, signOut, getSessionUser, onAuthChange, canAccess, AuthUser } from './utils/auth';
 
@@ -164,6 +165,7 @@ function App() {
     <ThemeProvider>
       <div className="App">
         {renderView()}
+        {user && <InstallAppButton />}
       </div>
     </ThemeProvider>
   );
